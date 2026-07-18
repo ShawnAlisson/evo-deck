@@ -21,6 +21,7 @@ import {
   newWidgetId,
   nextWidgetFrame,
 } from "@/lib/workspace/naming";
+import { isLiveDataBusyMessage } from "@/lib/workspace/data-intent";
 
 type RevisionRow = TimelineRevision & { snapshot: WorkspaceSnapshot };
 type PresenceUser = {
@@ -231,11 +232,7 @@ export function WorkspaceShell() {
     if (!canEdit || !message.trim()) return;
     setBusy(true);
     setBusyLabel(
-      /\b(hn|hacker|github|research|briefing|war.?room|ops board|signal|frontpage)\b/i.test(
-        message,
-      )
-        ? "Syncing live data…"
-        : "Thinking…",
+      isLiveDataBusyMessage(message) ? "Fetching live data…" : "Thinking…",
     );
     setError(null);
     try {
@@ -501,7 +498,7 @@ export function WorkspaceShell() {
     stopListening();
     setDockMode("keyboard");
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
@@ -691,6 +688,11 @@ export function WorkspaceShell() {
             busyLabel={busyLabel}
             canEdit={canEdit}
             inputRef={inputRef}
+            listening={listening}
+            onToggleMic={() => {
+              if (listening) stopListening();
+              else startListening();
+            }}
           />
         ) : null}
 

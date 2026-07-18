@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { queryEvents } from "@/lib/clickhouse/events";
+import { requireWorkspaceAccess } from "@/lib/workspace/access";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,8 @@ export async function GET(request: Request) {
       source: searchParams.get("source") ?? undefined,
       limit: searchParams.get("limit") ?? undefined,
     });
+
+    await requireWorkspaceAccess(parsed.workspaceId, "viewer");
 
     const rows = await queryEvents(parsed);
     return NextResponse.json({
@@ -38,6 +41,7 @@ export async function GET(request: Request) {
       }),
     });
   } catch (error) {
+    if (error instanceof Response) return error;
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Query failed" },
       { status: 400 },

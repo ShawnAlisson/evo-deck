@@ -59,6 +59,7 @@ export async function POST(request: Request) {
         liveData = await resolveLiveDataForChat({
           workspaceId: body.workspaceId,
           intent,
+          userMessage: body.message,
         });
         liveMeta = {
           via: liveData.via,
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
     const hasLiveDesk =
       liveData != null &&
       (liveData.dashboard.feed.length > 0 ||
-        liveData.dashboard.metrics.length > 0);
+        liveData.dashboard.metrics.length > 0 ||
+        Boolean(liveData.dashboard.rich));
 
     // Live intents: lay out a deterministic desk from real fetched data.
     // Don't rely on the LLM to copy numbers — it often invents a GenUI instead.

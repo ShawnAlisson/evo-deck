@@ -55,6 +55,21 @@ VERTEX_MODEL=gemini-2.5-flash
 | `npm run clickhouse:init` / `clickhouse:events` | ClickHouse bootstrap |
 | `npm run db:seed` | Seed data |
 
+## Live data
+
+Chat can pull **real** external data (not LLM guesses) via adapters and an allowlisted fetch tool:
+
+| Ask… | Source |
+| --- | --- |
+| Weather / forecast | Open-Meteo |
+| BTC, ETH, stocks (AAPL…) | CoinGecko / Stooq |
+| USD to EUR, FX | Frankfurter |
+| HN / GitHub / RSS | public APIs |
+| “what is X” | Wikipedia summary |
+| `fetch https://…` | Allowlisted `http_get` tool |
+
+API: `GET/POST /api/workspace/[id]/live` — status + refresh desk.
+
 ## Notes
 
 - Never commit `.env.local` — only `.env.example`.

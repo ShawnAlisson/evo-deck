@@ -19,6 +19,8 @@ export function MentionComposer({
   busyLabel,
   canEdit,
   inputRef,
+  listening,
+  onToggleMic,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -32,6 +34,8 @@ export function MentionComposer({
   busyLabel?: string;
   canEdit: boolean;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  listening?: boolean;
+  onToggleMic?: () => void;
 }) {
   const localRef = useRef<HTMLInputElement>(null);
   const ref = inputRef ?? localRef;
@@ -209,17 +213,68 @@ export function MentionComposer({
         </form>
       </div>
 
-      {onClose ? (
-        <button
-          type="button"
-          className="floating-close prompt-close"
-          aria-label="Close"
-          onClick={onClose}
-        >
-          ×
-        </button>
+      {(onToggleMic || onClose) ? (
+        <div className="prompt-side-actions">
+          {onToggleMic ? (
+            <button
+              type="button"
+              className={`prompt-side-btn${listening ? " is-hot" : ""}`}
+              aria-label={listening ? "Stop listening" : "Start voice input"}
+              aria-pressed={listening}
+              title={listening ? "Stop" : "Speak"}
+              disabled={disabled && !listening}
+              onClick={onToggleMic}
+            >
+              <MicIcon listening={Boolean(listening)} />
+            </button>
+          ) : null}
+          {onClose ? (
+            <button
+              type="button"
+              className="prompt-side-btn"
+              aria-label="Close"
+              title="Close"
+              onClick={onClose}
+            >
+              <CloseIcon />
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function MicIcon({ listening }: { listening: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        fill={listening ? "currentColor" : "none"}
+      />
+      <path
+        d="M5 11a7 7 0 0 0 14 0M12 18v3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

@@ -11,6 +11,18 @@ function asString(value: unknown, fallback = "") {
   return fallback;
 }
 
+/** Cheap remount key so OpenUI bindings reset when response/uiState change. */
+function hashUi(
+  response: string,
+  uiState: Record<string, unknown> | undefined,
+) {
+  const stateKey = uiState ? JSON.stringify(uiState) : "";
+  let h = 0;
+  const s = response + "|" + stateKey;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return String(h);
+}
+
 function cardLabel(card: unknown): string {
   if (typeof card === "string") return card;
   if (card && typeof card === "object") {
@@ -225,6 +237,7 @@ function renderBody(
           : undefined;
       return (
         <GenUiPanel
+          key={`${widget.id}:${response.length}:${hashUi(response, uiState)}`}
           response={response}
           initialState={uiState}
           onStateUpdate={onUiState}

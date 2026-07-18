@@ -6,11 +6,15 @@ import {
 } from "@/lib/clickhouse/dashboard";
 import { buildDashboardFromEvents } from "@/lib/clickhouse/build-dashboard";
 import type { LiveDataIntent } from "@/lib/workspace/data-intent";
+import {
+  dashboardFromToolResults,
+  runAgentFetchTools,
+} from "@/lib/workspace/agent-tools";
 
 export type LiveDataBundle = {
   intent: LiveDataIntent;
   dashboard: LiveDashboardData;
-  via: "trigger" | "inline" | "memory";
+  via: "trigger" | "inline" | "memory" | "tools";
   detail: string;
 };
 
@@ -53,7 +57,9 @@ async function syncInline(
   return { count: events.length, events, persisted: true as const };
 }
 
-async function runViaTrigger(intent: LiveDataIntent, workspaceId: string) {
+type SyncOrResearchIntent = Exclude<LiveDataIntent, { kind: "fetch" }>;
+
+async function runViaTrigger(intent: SyncOrResearchIntent, workspaceId: string) {
   const { syncSourceTask, researchWorkspaceTask } = await import(
     "@/src/trigger/sync"
   );
@@ -74,7 +80,7 @@ async function runViaTrigger(intent: LiveDataIntent, workspaceId: string) {
   return `Queued Trigger sync-source (${intent.source})`;
 }
 
-async function runInline(intent: LiveDataIntent, workspaceId: string) {
+async function runInline(intent: SyncOrResearchIntent, workspaceId: string) {
   if (intent.kind === "research") {
     const hn = await syncInline(workspaceId, "hackernews");
     const rss = await syncInline(workspaceId, "rss", {
@@ -96,16 +102,65 @@ async function runInline(intent: LiveDataIntent, workspaceId: string) {
   };
 }
 
+async function runFetchIntent(userMessage: string): Promise<LiveDataBundle> {
+  const { results, detail } = await runAgentFetchTools({ userMessage });
+  const toolDash = dashboardFromToolResults(results);
+
+  // Promote successful price/weather/fx tool payloads into rich desks
+  const rich: LiveDashboardData["rich"] = {};
+  for (const r of results) {
+    if (!r.ok || !r.data || typeof r.data !== "object") continue;
+    const d = r.data as Record<string, unknown>;
+    if (r.name === "lookup_weather" || typeof d.temperature === "number") {
+      rich.weather = d;
+    }
+    if (r.name === "lookup_price" || typeof d.price === "number") {
+      rich.markets = {
+        ...d,
+        sparklineLabels: (d.sparkline as { labels?: string[] } | undefined)?.labels,
+        sparklineValues: (d.sparkline as { values?: number[] } | undefined)?.values,
+      };
+    }
+    if (r.name === "lookup_fx" || d.rates) {
+      const rates = (d.rates as Record<string, number>) ?? {};
+      rich.fx = {
+        ...d,
+        rateLabels: Object.keys(rates),
+        rateValues: Object.values(rates),
+      };
+    }
+  }
+
+  return {
+    intent: { kind: "fetch", topic: userMessage.slice(0, 200) },
+    dashboard: {
+      sources: toolDash.sources,
+      feed: toolDash.feed,
+      metrics: toolDash.metrics,
+      chart: toolDash.chart,
+      rich: Object.keys(rich).length ? rich : undefined,
+      eventCount: toolDash.eventCount,
+    },
+    via: "tools",
+    detail,
+  };
+}
+
 /**
  * Orchestrate live data for a chat turn:
- * 1) Fetch adapters inline (always)
+ * 1) Fetch adapters inline (always) — or agent http_get tools for fetch intents
  * 2) Persist to ClickHouse when available
  * 3) Build dashboard from CH or in-memory events
  */
 export async function resolveLiveDataForChat(input: {
   workspaceId: string;
   intent: LiveDataIntent;
+  userMessage?: string;
 }): Promise<LiveDataBundle> {
+  if (input.intent.kind === "fetch") {
+    return runFetchIntent(input.userMessage ?? input.intent.topic);
+  }
+
   let via: LiveDataBundle["via"] = "inline";
   let detail = "";
   let memoryEvents: MemEvent[] = [];
@@ -127,21 +182,22 @@ export async function resolveLiveDataForChat(input: {
       : [input.intent.source];
 
   let dashboard: LiveDashboardData;
-  try {
-    dashboard = await aggregateLiveDashboard({
-      workspaceId: input.workspaceId,
-      sources,
-      limit: 50,
-    });
-    if (dashboard.feed.length === 0 && memoryEvents.length > 0) {
-      dashboard = buildDashboardFromEvents(memoryEvents, sources);
-      via = via === "trigger" ? via : "memory";
-    }
-  } catch (err) {
-    console.warn("ClickHouse aggregate failed; using memory dashboard:", err);
+  // Prefer freshly synced in-memory events for this turn (avoids stale CH rows)
+  if (memoryEvents.length > 0) {
     dashboard = buildDashboardFromEvents(memoryEvents, sources);
-    via = "memory";
-    detail = `${detail} · dashboard from memory`;
+  } else {
+    try {
+      dashboard = await aggregateLiveDashboard({
+        workspaceId: input.workspaceId,
+        sources,
+        limit: 50,
+      });
+    } catch (err) {
+      console.warn("ClickHouse aggregate failed; empty dashboard:", err);
+      dashboard = buildDashboardFromEvents([], sources);
+      via = "memory";
+      detail = `${detail} · dashboard empty`;
+    }
   }
 
   return {

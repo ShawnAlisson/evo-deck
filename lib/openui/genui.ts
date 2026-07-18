@@ -32,7 +32,9 @@ function getBasePrompt() {
 const ECHOES_INTERACTION_RULES = `## Echoes interaction rules
 - Prefer the richest OpenUI components that match the ask (LineChart / BarChart / AreaChart / PieChart / Table / Form / Tabs / Accordion / Steps / Card). Do not default to plain TextContent.
 - Price, BTC, stocks, trends over time → LineChart or AreaChart with Series(...). Category comparisons → BarChart. Shares/composition → PieChart.
+- NEVER invent live prices, weather, FX rates, or news scores. If LIVE DATA is in context, use ONLY those numbers. Otherwise keep charts illustrative with clearly labeled sample data or ask for a live fetch.
 - When the user asks for checkmarks, checklists, todos, shopping lists, or multi-select items: use CheckBoxGroup + CheckBoxItem (or SwitchGroup). Never fake checks with emoji (✅) or static TextContent.
+- To mark an item done on an existing list: keep all CheckBoxItems and set the 4th arg defaultChecked to true for that item only, e.g. milk = CheckBoxItem("Milk", "", "milk", true)
 - Prefer real interactive controls (CheckBoxGroup, Form fields, Buttons with Action, Tabs, Accordion) over decorative text.
 - Stack takes at most 6 positional args: children, direction?, gap?, align?, justify?, wrap?. Put ALL children in the first array arg — never pass siblings as extra Stack args.
 - Example checklist:

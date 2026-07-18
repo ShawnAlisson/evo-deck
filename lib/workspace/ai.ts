@@ -24,6 +24,11 @@ import {
   suggestWidgetIdentity,
 } from "@/lib/workspace/naming";
 import {
+  applyChecklistEditToOpenUi,
+  detectChecklistEditIntent,
+  widgetHasChecklist,
+} from "@/lib/workspace/checklist-edit";
+import {
   generateFlowchartJson,
   heuristicFruitEveningFlow,
   isFlowchartIntent,
@@ -456,9 +461,10 @@ Ops:
 
 ## Visual flexibility (CRITICAL)
 - Match the user's ask with OpenUI components: "line chart" → LineChart; "bar/column" → BarChart; "pie/donut" → PieChart; "area" → AreaChart; boards → Cards/Stacks; lists → Table or TextContent stacks.
-- Example BTC line chart:
+- NEVER invent live prices, weather, FX, or news numbers. If LIVE DATA is provided below, use ONLY those facts. If the user asks for prices/weather and no live data is present, say you need a live fetch — do not fabricate series like BTC 64200.
+- Example LineChart when live series is provided:
   labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
-  vals = [64200, 65100, 64850, 66010, 65800, 67120, 66900]
+  vals = [/* ONLY values from LIVE DATA */]
   s1 = Series("BTC", vals)
   chart = LineChart(labels, [s1], "natural")
   root = Stack([chart])
@@ -544,6 +550,8 @@ async function generateSingleGenUiFallback(input: {
 ## Echoes routing
 - Pick the best OpenUI chart/control for the request (LineChart, BarChart, AreaChart, PieChart, Table, Form, etc.).
 - For price/BTC/trends use LineChart or AreaChart — not BarChart unless asked.
+- NEVER invent prices, weather, or FX. Use LIVE DATA only when provided.
+- When UPDATING a checklist/todo: keep every existing CheckBoxItem, set defaultChecked true/false for the items the user named (4th arg). Do not drop items. Example: milk = CheckBoxItem("Milk", "", "milk", true)
 - Output ONLY openui-lang. First statement must be root = Stack(...).`;
 
   const raw = await chatComplete({
@@ -577,7 +585,8 @@ async function generateSingleGenUiFallback(input: {
           id: target.id,
           // Promote native stubs to genui when rewriting visuals
           type: "genui",
-          props: { response: normalized },
+          // Clear uiState so defaultChecked / new OpenUI isn't overridden by stale bindings
+          props: { response: normalized, uiState: null },
         },
       ]),
       source: "openui-genui" as const,
@@ -630,9 +639,26 @@ export async function generateWorkspaceOps(input: {
     normalizeSnapshot(input.snapshot).widgets,
   );
 
+  // Deterministic checklist check/uncheck — avoids stale uiState / LLM rewrite misses
+  const checklistFix = tryChecklistMentionEdit(
+    input.userMessage,
+    input.snapshot,
+    mentions,
+  );
+  if (checklistFix) return checklistFix;
+
   // Native chart label tweak only — don't block OpenUI upgrades
   const chartFix = tryEnsureChartLabels(input.userMessage, input.snapshot);
   if (chartFix) return chartFix;
+
+  // @mention on an existing genui → prefer OpenUI rewrite (before broad "visual" create path)
+  if (mentions.some((m) => m.type === "genui")) {
+    try {
+      return await generateSingleGenUiFallback(input);
+    } catch (genUiError) {
+      console.warn("OpenUI update path failed, trying ops agent:", genUiError);
+    }
+  }
 
   // New visual requests → OpenUI GenUI first (max flexibility)
   if (isOpenUiVisualIntent(input.userMessage)) {
@@ -640,15 +666,6 @@ export async function generateWorkspaceOps(input: {
       return await generateSingleGenUiFallback(input);
     } catch (genUiError) {
       console.warn("OpenUI visual path failed, trying ops agent:", genUiError);
-    }
-  }
-
-  // @mention on an existing genui → prefer OpenUI rewrite
-  if (mentions.some((m) => m.type === "genui")) {
-    try {
-      return await generateSingleGenUiFallback(input);
-    } catch (genUiError) {
-      console.warn("OpenUI update path failed, trying ops agent:", genUiError);
     }
   }
 
@@ -703,6 +720,43 @@ export async function generateWorkspaceOps(input: {
       };
     }
   }
+}
+
+/** @mention + check/mark done → rewrite CheckBoxItem defaults + sync uiState bindings. */
+function tryChecklistMentionEdit(
+  userMessage: string,
+  snapshot: WorkspaceSnapshot,
+  mentions: WorkspaceWidget[],
+) {
+  const intent = detectChecklistEditIntent(userMessage);
+  if (!intent) return null;
+
+  const base = normalizeSnapshot(snapshot);
+  const target =
+    mentions.find((m) => widgetHasChecklist(m)) ??
+    (mentions[0]?.type === "genui" ? mentions[0] : null);
+  if (!target || !widgetHasChecklist(target)) return null;
+
+  const response =
+    typeof target.props.response === "string" ? target.props.response : "";
+  const edited = applyChecklistEditToOpenUi(response, intent);
+  if (!edited) return null;
+
+  const verb = intent.action === "check" ? "Checked" : "Unchecked";
+  return {
+    assistantMessage: `${verb} ${edited.matched.join(", ")} on @${target.name}.`,
+    nextSnapshot: applyOps(base, [
+      {
+        op: "update_widget",
+        id: target.id,
+        props: {
+          response: edited.response,
+          uiState: edited.uiState,
+        },
+      },
+    ]),
+    source: "checklist-edit" as const,
+  };
 }
 
 /** @mention a chart + ask for numbers/labels → update props instead of no-op / new widget. */
@@ -834,10 +888,40 @@ export async function proposeWidgetsWithTools(input: {
   userMessage: string;
   snapshot: WorkspaceSnapshot;
 }) {
+  const { runAgentFetchTools, dashboardFromToolResults } = await import(
+    "@/lib/workspace/agent-tools"
+  );
+  const tools = await runAgentFetchTools({ userMessage: input.userMessage });
+  const toolDash = dashboardFromToolResults(tools.results);
+
+  let liveData: LiveDataBundle | null = null;
+  if (tools.results.some((r) => r.ok)) {
+    liveData = {
+      intent: { kind: "fetch", topic: input.userMessage.slice(0, 200) },
+      dashboard: {
+        sources: toolDash.sources,
+        feed: toolDash.feed,
+        metrics: toolDash.metrics,
+        chart: toolDash.chart,
+        eventCount: toolDash.eventCount,
+      },
+      via: "tools",
+      detail: tools.detail,
+    };
+  }
+
   const result = await generateWorkspaceOps({
     userMessage: input.userMessage,
     snapshot: input.snapshot,
     history: [],
+    liveData,
   });
-  return { ...result, toolCalls: [] };
+  return {
+    ...result,
+    toolCalls: tools.results.map((r) => ({
+      name: r.name,
+      ok: r.ok,
+      error: r.error,
+    })),
+  };
 }
