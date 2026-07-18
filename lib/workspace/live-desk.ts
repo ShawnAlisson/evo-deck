@@ -5,6 +5,26 @@ function j(value: unknown) {
   return JSON.stringify(value);
 }
 
+function liveSourceKey(live: LiveDataBundle) {
+  if (live.intent.kind === "sync") return live.intent.source;
+  if (live.intent.kind === "research") return "research";
+  return "fetch";
+}
+
+function belongsToLiveSource(
+  widget: WorkspaceSnapshot["widgets"][number],
+  source: string,
+) {
+  if (widget.props.__liveSource === source) return true;
+  // Keep compatibility with desks created before source markers existed.
+  return (
+    (source === "markets" && widget.id === "live-markets") ||
+    (source === "weather" && widget.id === "live-weather") ||
+    (source === "fx" && widget.id === "live-fx") ||
+    (source === "wikipedia" && widget.id === "live-wiki")
+  );
+}
+
 function weatherDeskResponse(w: Record<string, unknown>): string {
   const location = String(w.location ?? "Weather");
   const condition = String(w.condition ?? w.summary ?? "Conditions");
@@ -158,7 +178,8 @@ export function snapshotFromLiveData(
   snapshot: WorkspaceSnapshot,
   live: LiveDataBundle,
 ): WorkspaceSnapshot {
-  const keep = snapshot.widgets.filter((w) => !w.id.startsWith("live-"));
+  const sourceKey = liveSourceKey(live);
+  const keep = snapshot.widgets.filter((w) => !belongsToLiveSource(w, sourceKey));
   const widgets = [...keep];
   let z = Math.max(0, ...widgets.map((w) => w.frame.z), 0) + 1;
 
@@ -172,7 +193,10 @@ export function snapshotFromLiveData(
       name: "weather",
       title: String(rich.weather.location ?? "Weather"),
       frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.72, z: z++ },
-      props: { response: weatherDeskResponse(rich.weather) },
+      props: {
+        __liveSource: sourceKey,
+        response: weatherDeskResponse(rich.weather),
+      },
     });
     return { version: 1, widgets };
   }
@@ -184,7 +208,10 @@ export function snapshotFromLiveData(
       name: "markets",
       title: String(rich.markets.name ?? "Markets"),
       frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.68, z: z++ },
-      props: { response: marketsDeskResponse(rich.markets) },
+      props: {
+        __liveSource: sourceKey,
+        response: marketsDeskResponse(rich.markets),
+      },
     });
     return { version: 1, widgets };
   }
@@ -196,7 +223,10 @@ export function snapshotFromLiveData(
       name: "fx-rates",
       title: `${rich.fx.base ?? "FX"} rates`,
       frame: { x: 0.06, y: 0.06, w: 0.58, h: 0.62, z: z++ },
-      props: { response: fxDeskResponse(rich.fx) },
+      props: {
+        __liveSource: sourceKey,
+        response: fxDeskResponse(rich.fx),
+      },
     });
     return { version: 1, widgets };
   }
@@ -208,7 +238,10 @@ export function snapshotFromLiveData(
       name: "wiki",
       title: String(rich.wikipedia.title ?? "Lookup"),
       frame: { x: 0.08, y: 0.08, w: 0.5, h: 0.55, z: z++ },
-      props: { response: wikipediaDeskResponse(rich.wikipedia) },
+      props: {
+        __liveSource: sourceKey,
+        response: wikipediaDeskResponse(rich.wikipedia),
+      },
     });
     return { version: 1, widgets };
   }
@@ -226,6 +259,7 @@ export function snapshotFromLiveData(
       title: m.title,
       frame: { x: 0.04 + i * 0.24, y: 0.08, w: 0.22, h: 0.18, z: z++ },
       props: {
+        __liveSource: sourceKey,
         response: [
           `root = Stack([card])`,
           `card = Card([t, v], "card", "column", "xs")`,
@@ -248,12 +282,13 @@ export function snapshotFromLiveData(
           ? `chart = LineChart(labels, [s1], "natural")`
           : `chart = BarChart(labels, [s1], "grouped")`;
     widgets.push({
-      id: `live-${c.id}`,
+      id: `${sourceKey}-chart-${c.id}`,
       type: "genui",
       name: `chart-${c.id}`.slice(0, 48),
       title: c.title,
       frame: { x: 0.04, y: 0.3, w: 0.42, h: 0.4, z: z++ },
       props: {
+        __liveSource: sourceKey,
         response: [
           `root = Stack([title, chart])`,
           `title = TextContent(${j(c.title)}, "large-heavy")`,
@@ -277,7 +312,7 @@ export function snapshotFromLiveData(
       .map((_, i) => `item${i}`)
       .join(", ");
     widgets.push({
-      id: "live-feed",
+      id: `${sourceKey}-feed`,
       type: "genui",
       name: "live-feed",
       title,
@@ -289,6 +324,7 @@ export function snapshotFromLiveData(
         z: z++,
       },
       props: {
+        __liveSource: sourceKey,
         response: [
           `root = Stack([heading, ${kids}], "column", "s")`,
           `heading = TextContent(${j(title)}, "large-heavy")`,
@@ -300,12 +336,15 @@ export function snapshotFromLiveData(
 
   if (widgets.length === keep.length) {
     widgets.push({
-      id: "live-empty",
+      id: `${sourceKey}-empty`,
       type: "note",
       name: "live-empty",
       title: "Live data",
       frame: { x: 0.08, y: 0.12, w: 0.4, h: 0.2, z: z++ },
-      props: { body: live.detail || "No live events returned." },
+      props: {
+        __liveSource: sourceKey,
+        body: live.detail || "No live events returned.",
+      },
     });
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ActionEvent } from "@openuidev/react-lang";
+import { useEffect, useState } from "react";
 import type { WorkspaceWidget } from "@/lib/workspace/snapshot";
 import type { FlowEdge, FlowNode } from "@/lib/workspace/flowchart";
 import { GenUiPanel } from "@/components/canvas/genui-panel";
@@ -111,6 +112,13 @@ function renderBody(
         </div>
       );
     }
+    case "clock":
+      return (
+        <LiveClock
+          timezone={asString(widget.props.timezone)}
+          format={asString(widget.props.format, "24h")}
+        />
+      );
     case "note":
       return <p className="echo-note">{asString(widget.props.body, "…")}</p>;
     case "chart": {
@@ -252,6 +260,46 @@ function renderBody(
     default:
       return <p className="echo-note">Unsupported widget</p>;
   }
+}
+
+function LiveClock({
+  timezone,
+  format,
+}: {
+  timezone: string;
+  format: string;
+}) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const options: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: format.toLowerCase() === "12h",
+    ...(timezone ? { timeZone: timezone } : {}),
+  };
+  let label = "--:--";
+  try {
+    label = new Intl.DateTimeFormat(undefined, options).format(now);
+  } catch {
+    // Invalid user-provided timezones fall back to the browser's local time.
+    label = new Intl.DateTimeFormat(undefined, {
+      ...options,
+      timeZone: undefined,
+    }).format(now);
+  }
+
+  return (
+    <div className="echo-metric echo-clock" aria-live="polite">
+      <strong>{label}</strong>
+      {timezone ? <small>{timezone}</small> : null}
+    </div>
+  );
 }
 
 function formatChartValue(n: number) {

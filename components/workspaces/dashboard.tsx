@@ -24,6 +24,7 @@ export function WorkspacesDashboard() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [duplicateBusyId, setDuplicateBusyId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -119,6 +120,24 @@ export function WorkspacesDashboard() {
     }
   }
 
+  async function duplicateWorkspace(id: string) {
+    setDuplicateBusyId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/workspace/${id}/duplicate`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Duplicate failed");
+      setMenuId(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Duplicate failed");
+    } finally {
+      setDuplicateBusyId(null);
+    }
+  }
+
   async function logout() {
     await fetch("/api/auth", {
       method: "POST",
@@ -192,47 +211,57 @@ export function WorkspacesDashboard() {
                 </Link>
               )}
 
-              {w.role === "owner" ? (
-                <div className="dash-more">
-                  <button
-                    type="button"
-                    className="dash-more-btn"
-                    aria-label="More"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setMenuId((cur) => (cur === w.id ? null : w.id));
-                    }}
-                  >
-                    ⋯
-                  </button>
-                  {menuId === w.id ? (
-                    <div className="dash-menu" ref={menuRef} role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setRenamingId(w.id);
-                          setRenameValue(w.title);
-                          setMenuId(null);
-                        }}
-                      >
-                        Rename
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="is-danger"
-                        onClick={() => {
-                          setDeleteTarget(w);
-                          setMenuId(null);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+              <div className="dash-more">
+                <button
+                  type="button"
+                  className="dash-more-btn"
+                  aria-label="More"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMenuId((cur) => (cur === w.id ? null : w.id));
+                  }}
+                >
+                  ⋯
+                </button>
+                {menuId === w.id ? (
+                  <div className="dash-menu" ref={menuRef} role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={duplicateBusyId === w.id}
+                      onClick={() => void duplicateWorkspace(w.id)}
+                    >
+                      {duplicateBusyId === w.id ? "Duplicating…" : "Duplicate"}
+                    </button>
+                    {w.role === "owner" ? (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setRenamingId(w.id);
+                            setRenameValue(w.title);
+                            setMenuId(null);
+                          }}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="is-danger"
+                          onClick={() => {
+                            setDeleteTarget(w);
+                            setMenuId(null);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
           ))
         )}

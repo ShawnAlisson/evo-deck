@@ -171,6 +171,54 @@ export class GitHubAdapter implements SourceAdapter {
       payload?: { action?: string; ref?: string };
     }>;
 
+    if (events.length === 0) {
+      const profileRes = await fetch(
+        `https://api.github.com/users/${encodeURIComponent(user)}`,
+        {
+          headers: {
+            Accept: "application/vnd.github+json",
+            "User-Agent": "evodeck-app",
+          },
+        },
+      );
+      if (profileRes.ok) {
+        const profile = (await profileRes.json()) as {
+          login?: string;
+          name?: string;
+          bio?: string;
+          html_url?: string;
+          public_repos?: number;
+          followers?: number;
+        };
+        return {
+          source: this.type,
+          events: [
+            {
+              event_type: "profile",
+              ts: new Date(),
+              payload: {
+                title: `GitHub profile · ${profile.name || profile.login || user}`,
+                meta: [
+                  profile.bio,
+                  profile.public_repos != null
+                    ? `${profile.public_repos} public repos`
+                    : null,
+                  profile.followers != null
+                    ? `${profile.followers} followers`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+                url: profile.html_url ?? `https://github.com/${user}`,
+                public_repos: profile.public_repos ?? 0,
+                followers: profile.followers ?? 0,
+              },
+            },
+          ],
+        };
+      }
+    }
+
     return {
       source: this.type,
       events: events.slice(0, 30).map((e) => {

@@ -2,12 +2,15 @@ import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   chatMessages,
+  integrations,
   timelineBranches,
   workspaceRevisions,
+  workspaceMembers,
   workspaces,
 } from "@/lib/db/schema";
 import {
   emptySnapshot,
+  normalizeSnapshot,
   type WorkspaceSnapshot,
   workspaceSnapshotSchema,
 } from "@/lib/workspace/snapshot";
@@ -177,6 +180,111 @@ export async function createWorkspace(input?: {
   });
 
   return { workspace, revision };
+}
+
+/** Create an independent copy of a workspace, including its editable history. */
+export async function duplicateWorkspace(input: {
+  sourceWorkspaceId: string;
+  ownerId: string;
+  title: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [source] = await tx
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.id, input.sourceWorkspaceId))
+      .limit(1);
+
+    if (!source) return null;
+
+    const [workspace] = await tx
+      .insert(workspaces)
+      .values({ title: input.title, ownerId: input.ownerId })
+      .returning();
+
+    await tx.insert(workspaceMembers).values({
+      workspaceId: workspace.id,
+      userId: input.ownerId,
+      role: "owner",
+    });
+
+    const messages = await tx
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.workspaceId, source.id))
+      .orderBy(asc(chatMessages.createdAt));
+    const messageIds = new Map<string, string>();
+
+    for (const message of messages) {
+      const [copy] = await tx
+        .insert(chatMessages)
+        .values({
+          workspaceId: workspace.id,
+          role: message.role,
+          content: message.content,
+          createdAt: message.createdAt,
+        })
+        .returning({ id: chatMessages.id });
+      messageIds.set(message.id, copy.id);
+    }
+
+    const revisions = await tx
+      .select()
+      .from(workspaceRevisions)
+      .where(eq(workspaceRevisions.workspaceId, source.id))
+      .orderBy(asc(workspaceRevisions.seq));
+    if (revisions.length > 0) {
+      await tx.insert(workspaceRevisions).values(
+        revisions.map((revision) => ({
+          workspaceId: workspace.id,
+          seq: revision.seq,
+          cause: revision.cause,
+          messageId: revision.messageId
+            ? (messageIds.get(revision.messageId) ?? null)
+            : null,
+          snapshot: normalizeSnapshot(
+            workspaceSnapshotSchema.parse(revision.snapshot),
+          ),
+          label: revision.label,
+          createdAt: revision.createdAt,
+        })),
+      );
+    }
+
+    const branches = await tx
+      .select()
+      .from(timelineBranches)
+      .where(eq(timelineBranches.workspaceId, source.id));
+    if (branches.length > 0) {
+      await tx.insert(timelineBranches).values(
+        branches.map((branch) => ({
+          workspaceId: workspace.id,
+          name: branch.name,
+          fromSeq: branch.fromSeq,
+          createdAt: branch.createdAt,
+        })),
+      );
+    }
+
+    const sourceIntegrations = await tx
+      .select()
+      .from(integrations)
+      .where(eq(integrations.workspaceId, source.id));
+    if (sourceIntegrations.length > 0) {
+      await tx.insert(integrations).values(
+        sourceIntegrations.map((integration) => ({
+          workspaceId: workspace.id,
+          type: integration.type,
+          config: integration.config,
+          status: integration.status,
+          createdAt: integration.createdAt,
+          updatedAt: integration.updatedAt,
+        })),
+      );
+    }
+
+    return workspace;
+  });
 }
 
 export async function listMessages(workspaceId: string) {

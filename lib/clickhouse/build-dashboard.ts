@@ -109,6 +109,7 @@ export function buildDashboardFromEvents(
         meta: [
           row.source,
           score != null ? `${score} pts` : null,
+          typeof payload.meta === "string" ? payload.meta : null,
           typeof payload.by === "string" ? payload.by : null,
           typeof payload.location === "string" ? payload.location : null,
           typeof payload.changeLabel === "string" ? payload.changeLabel : null,
@@ -193,7 +194,16 @@ export function buildDashboardFromEvents(
     });
   }
 
-  if (!rich.weather && !rich.markets && !rich.fx) {
+  const hasGithubProfile = filtered.some(
+    (row) => row.source === "github" && row.event_type === "profile",
+  );
+  if (
+    !rich.weather &&
+    !rich.markets &&
+    !rich.fx &&
+    !hasGithubProfile &&
+    filtered.length > 0
+  ) {
     metrics.push({
       id: "metric-events",
       title: "Live events",
@@ -221,7 +231,22 @@ export function buildDashboardFromEvents(
   }
 
   const githubRows = filtered.filter((r) => r.source === "github");
-  if (githubRows.length > 0) {
+  const githubProfile = githubRows.find((r) => r.event_type === "profile");
+  if (githubProfile) {
+    const p = parsePayload(githubProfile.payload);
+    metrics.push(
+      {
+        id: "metric-gh-repos",
+        title: "Public repos",
+        value: String(p.public_repos ?? 0),
+      },
+      {
+        id: "metric-gh-followers",
+        title: "Followers",
+        value: String(p.followers ?? 0),
+      },
+    );
+  } else if (githubRows.length > 0) {
     metrics.push({
       id: "metric-gh",
       title: "GitHub events",

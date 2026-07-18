@@ -75,7 +75,7 @@ function sanitizeGenUiProps(props: Record<string, unknown>) {
   return { ...props, response: normalized };
 }
 
-const AI_CREATE_TYPES = new Set(["genui", "note", "flowchart"]);
+const AI_CREATE_TYPES = new Set(["genui", "note", "clock", "flowchart"]);
 
 /** Map legacy native adds → genui OpenUI (or keep note/flowchart). */
 function coerceLegacyAddToAllowed(
@@ -454,6 +454,7 @@ Ops:
 - {"op":"remove_widget","id":"..."}
 
 ## Allowed widget types (STRICT)
+- **clock** — a live current-time widget. Props may include timezone (IANA zone such as Europe/London) and format (12h or 24h). Use this for requests to add a clock or current time; never use a static --:-- text placeholder.
 - **genui** (DEFAULT) — props.response = openui-lang with root = Stack(...). Use for charts, tables, forms, checklists, dashboards, kanban-like boards, calendars, feeds, KPIs — anything OpenUI can express (LineChart, BarChart, AreaChart, PieChart, Table, Form, Tabs, Card, Steps, CheckBoxGroup, …).
 - **note** — props: { body } — plain text only.
 - **flowchart** — props: { nodes:[{id,label,kind}], edges:[{from,to,label?}] } — ONLY for freeform decision graphs (OpenUI has Steps, not node/edge graphs).

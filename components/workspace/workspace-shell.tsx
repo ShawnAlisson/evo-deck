@@ -94,7 +94,10 @@ export function WorkspaceShell() {
         router.replace("/login");
         return;
       }
-      if (!detail.ok) throw new Error("Failed to refresh workspace");
+      if (!detail.ok) {
+        const failure = await detail.json().catch(() => ({}));
+        throw new Error(failure.error ?? "Failed to refresh workspace");
+      }
       const full = await detail.json();
       setRole(full.role);
       setMembers(full.members ?? []);

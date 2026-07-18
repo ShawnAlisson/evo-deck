@@ -8,6 +8,7 @@ export const widgetTypeSchema = z.enum([
   "calendar",
   "feed",
   "metric",
+  "clock",
   // Active create types
   "note",
   "flowchart",
@@ -35,7 +36,9 @@ export const widgetSchema = z.object({
   id: z.string().min(1),
   type: widgetTypeSchema,
   /** Short @mention handle (slug). */
-  name: z.string().min(1).optional().default(""),
+  // Empty names exist in older snapshots; normalizeSnapshot assigns a stable
+  // mentionable name when the snapshot is loaded or persisted.
+  name: z.string().optional().default(""),
   title: z.string(),
   frame: frameSchema,
   props: z.record(z.string(), z.unknown()).default({}),

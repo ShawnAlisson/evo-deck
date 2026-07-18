@@ -106,6 +106,18 @@ export function detectLiveDataIntent(message: string): LiveDataIntent | null {
     };
   }
 
+  const ghUrl = lower.match(
+    /https?:\/\/(?:www\.)?github\.com\/([a-z0-9-]+)/i,
+  );
+  if (ghUrl?.[1]) {
+    return {
+      kind: "sync",
+      source: "github",
+      config: { user: ghUrl[1] },
+      topic: text.slice(0, 160),
+    };
+  }
+
   const ghUser = lower.match(
     /\bgithub(?:\s+activity|\s+events?)?(?:\s+for|\s+of|\s+@)?\s+([a-z0-9-]+)/i,
   );
