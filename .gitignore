@@ -12,10 +12,6 @@
 /coverage
 .tmp-demo-test/
 
-# local presentation notes
-DEMO_SCRIPT.md
-SUBMISSION.md
-
 # next.js
 /.next/
 /out/
