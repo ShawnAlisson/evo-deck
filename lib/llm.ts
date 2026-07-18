@@ -26,6 +26,26 @@ function isLocalBaseUrl(baseURL?: string) {
   }
 }
 
+/** GPT-5.6 reasoning models only accept the default temperature value. */
+function omitsCustomTemperature(model: string) {
+  return /^gpt-5\.6(?:-|$)/i.test(model.trim());
+}
+
+function isUnsupportedTemperatureError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const details = error as {
+    param?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  return (
+    details.param === "temperature" &&
+    details.code === "unsupported_value" &&
+    typeof details.message === "string" &&
+    /only the default/i.test(details.message)
+  );
+}
+
 /** Active provider — switch with AI_PROVIDER=openai|gemini|vertex */
 export function getAiProvider(): AiProvider {
   const raw = (process.env.AI_PROVIDER ?? "openai").trim().toLowerCase();
@@ -188,16 +208,29 @@ function splitSystemMessages(messages: ChatMessage[]) {
 async function chatCompleteOpenAI(opts: ChatCompleteOptions): Promise<string> {
   const client = getOpenAIClient();
   const model = opts.model ?? getAiModel("openai");
-  const completion = await client.chat.completions.create({
+  const request = {
     model,
-    temperature: opts.temperature ?? 0.2,
     ...(opts.json ? { response_format: { type: "json_object" as const } } : {}),
     messages: opts.messages.map((m) => ({
       role: m.role,
       content: m.content,
     })),
-  });
-  return completion.choices[0]?.message?.content ?? "";
+  };
+
+  try {
+    const completion = await client.chat.completions.create({
+      ...request,
+      ...(omitsCustomTemperature(model)
+        ? {}
+        : { temperature: opts.temperature ?? 0.2 }),
+    });
+    return completion.choices[0]?.message?.content ?? "";
+  } catch (error) {
+    // Keep unknown/future model variants resilient without hiding unrelated API errors.
+    if (!isUnsupportedTemperatureError(error)) throw error;
+    const completion = await client.chat.completions.create(request);
+    return completion.choices[0]?.message?.content ?? "";
+  }
 }
 
 async function chatCompleteGoogle(
