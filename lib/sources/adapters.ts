@@ -158,7 +158,7 @@ export class GitHubAdapter implements SourceAdapter {
       {
         headers: {
           Accept: "application/vnd.github+json",
-          "User-Agent": "echoes-app",
+          "User-Agent": "evodeck-app",
         },
       },
     );
@@ -443,11 +443,11 @@ export class WikipediaAdapter implements SourceAdapter {
     const topic =
       typeof input.config?.topic === "string" && input.config.topic.trim()
         ? input.config.topic.trim()
-        : "Echo";
+        : "EvoDeck";
 
     const res = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic.replace(/\s+/g, "_"))}`,
-      { headers: { Accept: "application/json", "User-Agent": "echoes-app" } },
+      { headers: { Accept: "application/json", "User-Agent": "evodeck-app" } },
     );
     if (!res.ok) throw new Error(`Wikipedia failed: ${res.status}`);
     const json = (await res.json()) as {

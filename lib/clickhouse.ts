@@ -18,7 +18,7 @@ export function getClickHouseClient(): ClickHouseClient {
     username: process.env.CLICKHOUSE_USER ?? "default",
     password: process.env.CLICKHOUSE_PASSWORD ?? "",
     database: process.env.CLICKHOUSE_DATABASE ?? "default",
-    application: "echoes",
+    application: "evodeck",
   });
 
   return client;

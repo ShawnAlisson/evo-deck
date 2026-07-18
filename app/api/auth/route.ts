@@ -33,10 +33,10 @@ export async function POST(request: Request) {
 
     if (action === "logout") {
       const jar = await cookies();
-      const token = jar.get("echoes_session")?.value;
+      const token = jar.get("evodeck_session")?.value;
       if (token) await destroySession(token);
       const res = NextResponse.json({ ok: true });
-      res.cookies.set("echoes_session", "", { path: "/", maxAge: 0 });
+      res.cookies.set("evodeck_session", "", { path: "/", maxAge: 0 });
       return res;
     }
 

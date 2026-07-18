@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 520" fill="none">
+  <title>EvoDeck demo flow</title>
+  <rect width="1440" height="520" rx="28" fill="#1C1914"/>
+  <text x="70" y="92" fill="#FFF9EC" font-family="Georgia, serif" font-size="48" font-weight="700">The EvoDeck demo in four moments</text>
+  <g fill="none" stroke="#BFAE96" stroke-width="4" stroke-linecap="round"><path d="M340 284h77"/><path d="M678 284h77"/><path d="M1016 284h77"/></g><g fill="#BFAE96"><path d="m405 272 20 12-20 12z"/><path d="m743 272 20 12-20 12z"/><path d="m1081 272 20 12-20 12z"/></g>
+  <g font-family="Arial, sans-serif">
+    <rect x="70" y="176" width="270" height="220" rx="22" fill="#FFF9EC"/><circle cx="112" cy="220" r="20" fill="#B65C38"/><text x="101" y="228" fill="#FFF9EC" font-size="19" font-weight="700">1</text><text x="100" y="278" fill="#1C1914" font-size="25" font-weight="700">Ask</text><text x="100" y="317" fill="#685F54" font-size="19">Describe the workspace</text><text x="100" y="345" fill="#685F54" font-size="19">you need in plain language.</text>
+    <rect x="408" y="176" width="270" height="220" rx="22" fill="#E8EEDF"/><circle cx="450" cy="220" r="20" fill="#3F5D4A"/><text x="439" y="228" fill="#FFF9EC" font-size="19" font-weight="700">2</text><text x="438" y="278" fill="#1C1914" font-size="25" font-weight="700">Watch it form</text><text x="438" y="317" fill="#3F5D4A" font-size="19">AI creates useful,</text><text x="438" y="345" fill="#3F5D4A" font-size="19">interactive widgets.</text>
+    <rect x="746" y="176" width="270" height="220" rx="22" fill="#F5E2D4"/><circle cx="788" cy="220" r="20" fill="#B65C38"/><text x="777" y="228" fill="#FFF9EC" font-size="19" font-weight="700">3</text><text x="776" y="278" fill="#1C1914" font-size="25" font-weight="700">Evolve it</text><text x="776" y="317" fill="#7C402B" font-size="19">Use @mentions to change</text><text x="776" y="345" fill="#7C402B" font-size="19">one part without reset.</text>
+    <rect x="1084" y="176" width="286" height="220" rx="22" fill="#3F5D4A"/><circle cx="1126" cy="220" r="20" fill="#FFF9EC"/><text x="1115" y="228" fill="#3F5D4A" font-size="19" font-weight="700">4</text><text x="1114" y="278" fill="#FFF9EC" font-size="25" font-weight="700">Rewind together</text><text x="1114" y="317" fill="#D4E3D6" font-size="19">Scrub version history,</text><text x="1114" y="345" fill="#D4E3D6" font-size="19">share a live workspace.</text>
+  </g>
+</svg>

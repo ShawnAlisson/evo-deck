@@ -11,7 +11,7 @@ const seedSnapshot: WorkspaceSnapshot = {
       title: "Welcome",
       frame: { x: 0.05, y: 0.08, w: 0.36, h: 0.28, z: 1 },
       props: {
-        body: "Ask Echoes to build your workspace. Every change becomes a timeline frame you can scrub like video.",
+        body: "Ask EvoDeck to build your workspace. Every change becomes a timeline frame you can scrub like video.",
       },
     },
     {

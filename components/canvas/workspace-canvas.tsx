@@ -416,7 +416,7 @@ export function WorkspaceCanvas({
       ))}
       {sorted.length === 0 ? (
         <div className="echo-empty">
-          <p className="echo-brand">Echoes</p>
+          <p className="evodeck-brand">EvoDeck</p>
           <p>Describe the workspace you want.</p>
           <p className="echo-empty-hint">Mention widgets later with @name</p>
         </div>

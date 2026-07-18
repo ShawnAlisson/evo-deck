@@ -1,4 +1,4 @@
-import { queryEvents, type EchoEvent } from "@/lib/clickhouse/events";
+import { queryEvents, type EvoDeckEvent } from "@/lib/clickhouse/events";
 import {
   buildDashboardFromEvents,
   type LiveDashboardData,
@@ -22,4 +22,4 @@ export async function aggregateLiveDashboard(input: {
   return dash;
 }
 
-export type { EchoEvent };
+export type { EvoDeckEvent };

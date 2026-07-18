@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { sessions, users } from "@/lib/db/schema";
 
-const SESSION_COOKIE = "echoes_session";
+const SESSION_COOKIE = "evodeck_session";
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);

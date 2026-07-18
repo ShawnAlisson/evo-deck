@@ -1,5 +1,5 @@
 /**
- * Creates ClickHouse analytics tables for Echoes.
+ * Creates ClickHouse analytics tables for EvoDeck.
  * Usage: node --env-file=.env.local scripts/init-clickhouse-events.mjs
  */
 import { createClient } from "@clickhouse/client";
@@ -7,7 +7,7 @@ import { createClient } from "@clickhouse/client";
 const url = process.env.CLICKHOUSE_URL;
 const username = process.env.CLICKHOUSE_USER ?? "default";
 const password = process.env.CLICKHOUSE_PASSWORD ?? "";
-const database = process.env.CLICKHOUSE_DATABASE ?? "echoes";
+const database = process.env.CLICKHOUSE_DATABASE ?? "evodeck";
 
 if (!url || !password) {
   console.error("Missing CLICKHOUSE_URL or CLICKHOUSE_PASSWORD");
@@ -18,7 +18,7 @@ const client = createClient({
   url,
   username,
   password,
-  application: "echoes-events-init",
+  application: "evodeck-events-init",
   request_timeout: 60_000,
 });
 

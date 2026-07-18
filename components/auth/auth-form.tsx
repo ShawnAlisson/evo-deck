@@ -40,7 +40,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <form className="auth-card" onSubmit={submit}>
-      <p className="echo-brand">Echoes</p>
+      <p className="evodeck-brand">EvoDeck</p>
       <h1>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
       <p className="auth-sub">
         {mode === "login"

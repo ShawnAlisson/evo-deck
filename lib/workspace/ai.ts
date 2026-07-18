@@ -439,7 +439,7 @@ async function generateOpsFromPrompt(input: {
 
   const openUiGuide = buildGenUiSystemPrompt(liveExtra);
 
-  const system = `You are Echoes, an AI canvas OS. You mutate a workspace of named widgets via JSON ops.
+  const system = `You are EvoDeck, an AI canvas OS. You mutate a workspace of named widgets via JSON ops.
 
 Return ONLY a JSON object (no markdown) with shape:
 {
@@ -547,7 +547,7 @@ async function generateSingleGenUiFallback(input: {
     : "";
   const system = `${buildGenUiSystemPrompt(liveExtra)}
 
-## Echoes routing
+## EvoDeck routing
 - Pick the best OpenUI chart/control for the request (LineChart, BarChart, AreaChart, PieChart, Table, Form, etc.).
 - For price/BTC/trends use LineChart or AreaChart — not BarChart unless asked.
 - NEVER invent prices, weather, or FX. Use LIVE DATA only when provided.

@@ -132,7 +132,7 @@ body {
   background: var(--body-bg);
 }
 
-.echo-brand {
+.evodeck-brand {
   font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.03em;
@@ -140,13 +140,13 @@ body {
   margin: 0;
 }
 
-.echo-brand.mini {
+.evodeck-brand.mini {
   font-size: 1.05rem;
   text-decoration: none;
   color: inherit;
 }
 
-.echo-brand.landing-hero-brand {
+.evodeck-brand.landing-hero-brand {
   font-size: clamp(3.5rem, 9vw, 6.5rem);
   line-height: 0.95;
   margin-bottom: 0.35rem;
@@ -208,8 +208,18 @@ body {
 }
 
 .landing-hero {
-  max-width: 760px;
-  padding: 12vh 1.75rem 4rem;
+  width: min(1260px, 100%);
+  min-height: calc(100vh - 88px);
+  margin: 0 auto;
+  padding: 9vh 1.75rem 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(350px, 1.08fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.landing-copy {
+  max-width: 600px;
 }
 
 .landing-hero h1 {
@@ -235,6 +245,13 @@ body {
   flex-wrap: wrap;
   gap: 0.85rem;
   align-items: center;
+}
+
+.landing-art {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: url("/brand/evodeck-hero.svg") center / contain no-repeat;
+  filter: drop-shadow(0 30px 45px rgba(28, 25, 20, 0.2));
 }
 
 .landing-ghost {
@@ -1730,7 +1747,7 @@ body {
   color: inherit;
 }
 
-/* Keep OpenUI tokens aligned with Echoes glass in both schemes */
+/* Keep OpenUI tokens aligned with EvoDeck glass in both schemes */
 .echo-genui {
   --openui-background: transparent;
   --openui-surface: transparent;
@@ -1756,7 +1773,7 @@ body {
   opacity: 0.7;
 }
 
-.echo-empty .echo-brand {
+.echo-empty .evodeck-brand {
   font-size: 3rem;
   color: var(--ink);
 }
@@ -2068,6 +2085,14 @@ body {
 @media (max-width: 720px) {
   .landing-hero {
     padding-top: 8vh;
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 1.5rem;
+  }
+
+  .landing-art {
+    width: min(560px, 100%);
+    margin: 0 auto;
   }
 
   .bottom-dock {

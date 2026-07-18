@@ -179,7 +179,7 @@ const widgetUnion = z.union([
 export const CanvasRoot = defineComponent({
   name: "Canvas",
   description:
-    "Absolute-positioned Echoes workspace root. message = short assistant reply answering the user; widgets = ONLY the widgets needed for this request (often just 1).",
+    "Absolute-positioned EvoDeck workspace root. message = short assistant reply answering the user; widgets = ONLY the widgets needed for this request (often just 1).",
   props: z.object({
     message: z.string(),
     widgets: z.array(widgetUnion),
@@ -187,7 +187,7 @@ export const CanvasRoot = defineComponent({
   component: noop,
 });
 
-export const echoesLibrary = createLibrary({
+export const evoDeckLibrary = createLibrary({
   root: "Canvas",
   components: [
     CanvasRoot,

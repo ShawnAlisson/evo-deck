@@ -1,20 +1,20 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: echoes-postgres
+    container_name: evodeck-postgres
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: echoes
-      POSTGRES_PASSWORD: echoes
-      POSTGRES_DB: echoes
+      POSTGRES_USER: evodeck
+      POSTGRES_PASSWORD: evodeck
+      POSTGRES_DB: evodeck
     volumes:
-      - echoes_pg_data:/var/lib/postgresql/data
+      - evodeck_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U echoes -d echoes"]
+      test: ["CMD-SHELL", "pg_isready -U evodeck -d evodeck"]
       interval: 3s
       timeout: 3s
       retries: 20
 
 volumes:
-  echoes_pg_data:
+  evodeck_pg_data:

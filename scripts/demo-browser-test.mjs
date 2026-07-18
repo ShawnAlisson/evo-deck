@@ -1,5 +1,5 @@
 /**
- * Browser demo harness for Echoes prompts + UI.
+ * Browser demo harness for EvoDeck prompts + UI.
  * Run: node scripts/demo-browser-test.mjs
  */
 import { chromium } from "playwright";
@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
-const EMAIL = `demo+${Date.now()}@echoes.test`;
+const EMAIL = `demo+${Date.now()}@evodeck.test`;
 const PASSWORD = "demopass123";
 const OUT = join(process.cwd(), ".tmp-demo-test");
 mkdirSync(OUT, { recursive: true });

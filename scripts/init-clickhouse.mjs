@@ -7,7 +7,7 @@ import { createClient } from "@clickhouse/client";
 const url = process.env.CLICKHOUSE_URL;
 const username = process.env.CLICKHOUSE_USER ?? "default";
 const password = process.env.CLICKHOUSE_PASSWORD ?? "";
-const database = process.env.CLICKHOUSE_DATABASE ?? "echoes";
+const database = process.env.CLICKHOUSE_DATABASE ?? "evodeck";
 
 if (!url) {
   console.error(
@@ -25,7 +25,7 @@ const client = createClient({
   url,
   username,
   password,
-  application: "echoes-init",
+  application: "evodeck-init",
   // Cloud services can take a while to wake from idle
   request_timeout: 60_000,
 });

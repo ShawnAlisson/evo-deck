@@ -29,7 +29,7 @@ function getBasePrompt() {
   return basePrompt;
 }
 
-const ECHOES_INTERACTION_RULES = `## Echoes interaction rules
+const EVODECK_INTERACTION_RULES = `## EvoDeck interaction rules
 - Prefer the richest OpenUI components that match the ask (LineChart / BarChart / AreaChart / PieChart / Table / Form / Tabs / Accordion / Steps / Card). Do not default to plain TextContent.
 - Price, BTC, stocks, trends over time → LineChart or AreaChart with Series(...). Category comparisons → BarChart. Shares/composition → PieChart.
 - NEVER invent live prices, weather, FX rates, or news scores. If LIVE DATA is in context, use ONLY those numbers. Otherwise keep charts illustrative with clearly labeled sample data or ask for a live fetch.
@@ -54,8 +54,8 @@ const ECHOES_INTERACTION_RULES = `## Echoes interaction rules
 /** Full OpenUI component library prompt — any visual UI, not a fixed widget enum. */
 export function buildGenUiSystemPrompt(extra?: string) {
   const base = getBasePrompt();
-  const parts = [base, ECHOES_INTERACTION_RULES];
-  if (extra?.trim()) parts.push(`## Echoes context\n${extra.trim()}`);
+  const parts = [base, EVODECK_INTERACTION_RULES];
+  if (extra?.trim()) parts.push(`## EvoDeck context\n${extra.trim()}`);
   return parts.join("\n\n");
 }
 

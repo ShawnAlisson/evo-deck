@@ -84,7 +84,7 @@ export async function httpGetTool(input: {
       signal: controller.signal,
       headers: {
         Accept: input.accept ?? "application/json, text/plain, */*",
-        "User-Agent": "echoes-agent/1.0",
+        "User-Agent": "evodeck-agent/1.0",
       },
     });
 

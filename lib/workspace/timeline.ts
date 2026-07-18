@@ -163,7 +163,7 @@ export async function createWorkspace(input?: {
   const [workspace] = await db
     .insert(workspaces)
     .values({
-      title: input?.title ?? "Echoes",
+      title: input?.title ?? "EvoDeck",
       ownerId: input?.ownerId ?? null,
     })
     .returning();

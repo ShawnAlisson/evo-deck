@@ -1,6 +1,6 @@
 import { getClickHouseClient } from "@/lib/clickhouse";
 
-export type EchoEvent = {
+export type EvoDeckEvent = {
   workspace_id: string;
   source: string;
   event_type: string;
@@ -8,7 +8,7 @@ export type EchoEvent = {
   payload: Record<string, unknown>;
 };
 
-export async function insertEvents(events: EchoEvent[]) {
+export async function insertEvents(events: EvoDeckEvent[]) {
   if (events.length === 0) return;
   const client = getClickHouseClient();
   await client.insert({

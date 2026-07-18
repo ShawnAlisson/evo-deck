@@ -132,7 +132,7 @@ export function WorkspacesDashboard() {
     <div className="dash">
       <header className="dash-head">
         <div>
-          <p className="echo-brand">Echoes</p>
+          <p className="evodeck-brand">EvoDeck</p>
           <p className="dash-sub">{userEmail}</p>
         </div>
         <button type="button" className="ghost-btn" onClick={() => void logout()}>

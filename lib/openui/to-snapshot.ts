@@ -6,11 +6,11 @@ import {
   type WidgetType,
   workspaceSnapshotSchema,
 } from "@/lib/workspace/snapshot";
-import { echoesLibrary, isElementNode } from "@/lib/openui/library";
+import { evoDeckLibrary, isElementNode } from "@/lib/openui/library";
 import { sanitizePlainText } from "@/lib/openui/plain-text";
 import { slugifyName } from "@/lib/workspace/naming";
 
-const parser = createParser(echoesLibrary.toJSONSchema(), "Canvas");
+const parser = createParser(evoDeckLibrary.toJSONSchema(), "Canvas");
 
 function num(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -199,8 +199,8 @@ export function buildOpenUiSystemPrompt(hasLiveData = false) {
 - Dashboard / board / desk requests without live data → compose widgets the user asked for.
 - Never invent chart series.`;
 
-  return echoesLibrary.prompt({
-    preamble: `You are Echoes, an AI that builds a live absolute-positioned workspace canvas with OpenUI Lang.
+  return evoDeckLibrary.prompt({
+    preamble: `You are EvoDeck, an AI that builds a live absolute-positioned workspace canvas with OpenUI Lang.
 Output ONLY OpenUI Lang (no markdown fences, no prose outside OpenUI statements).
 Widgets use normalized frames (x,y,w,h,z) in 0–1 space.
 

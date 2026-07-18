@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 790" fill="none">
+  <title>EvoDeck architecture</title>
+  <defs><filter id="s" x="0" y="0" width="1440" height="790" filterUnits="userSpaceOnUse"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-opacity=".12"/></filter></defs>
+  <rect width="1440" height="790" rx="28" fill="#F3EFE6"/>
+  <text x="70" y="88" fill="#1C1914" font-family="Georgia, serif" font-size="48" font-weight="700">How EvoDeck turns a thought into a living workspace</text>
+  <text x="72" y="126" fill="#685F54" font-family="Arial, sans-serif" font-size="22">A durable, collaborative canvas with real data and rewindable decisions.</text>
+  <g stroke="#B7AB99" stroke-width="4" stroke-linecap="round"><path d="M300 332h98"/><path d="M618 332h98"/><path d="M936 332h98"/><path d="M822 464v74"/><path d="M822 538h212"/></g>
+  <g fill="#B7AB99"><path d="m386 320 20 12-20 12z"/><path d="m704 320 20 12-20 12z"/><path d="m1022 320 20 12-20 12z"/><path d="m1034 526 20 12-20 12z"/></g>
+  <g filter="url(#s)">
+    <rect x="70" y="235" width="230" height="194" rx="25" fill="#1C1914"/><text x="100" y="296" fill="#FFF9EC" font-family="Arial, sans-serif" font-size="25" font-weight="700">Conversation</text><text x="100" y="335" fill="#D8D0C3" font-family="Arial, sans-serif" font-size="19">Describe a goal.</text><text x="100" y="365" fill="#D8D0C3" font-family="Arial, sans-serif" font-size="19">Mention a widget.</text>
+    <rect x="388" y="235" width="230" height="194" rx="25" fill="#FFFDF7" stroke="#D5CABA" stroke-width="2"/><text x="418" y="296" fill="#1C1914" font-family="Arial, sans-serif" font-size="25" font-weight="700">AI orchestration</text><text x="418" y="335" fill="#685F54" font-family="Arial, sans-serif" font-size="19">Intent → safe ops</text><text x="418" y="365" fill="#685F54" font-family="Arial, sans-serif" font-size="19">OpenUI generation</text>
+    <rect x="706" y="235" width="230" height="194" rx="25" fill="#E8EEDF" stroke="#B8C9BB" stroke-width="2"/><text x="736" y="296" fill="#1C1914" font-family="Arial, sans-serif" font-size="25" font-weight="700">EvoDeck canvas</text><text x="736" y="335" fill="#3F5D4A" font-family="Arial, sans-serif" font-size="19">Interactive widgets</text><text x="736" y="365" fill="#3F5D4A" font-family="Arial, sans-serif" font-size="19">Presence + timeline</text>
+    <rect x="1024" y="235" width="346" height="194" rx="25" fill="#F5E2D4" stroke="#D7B29A" stroke-width="2"/><text x="1054" y="296" fill="#1C1914" font-family="Arial, sans-serif" font-size="25" font-weight="700">Durable workspace</text><text x="1054" y="335" fill="#7C402B" font-family="Arial, sans-serif" font-size="19">Postgres + Drizzle</text><text x="1054" y="365" fill="#7C402B" font-family="Arial, sans-serif" font-size="19">Revisions + collaboration</text>
+    <rect x="706" y="538" width="330" height="162" rx="25" fill="#3F5D4A"/><text x="736" y="595" fill="#FFF9EC" font-family="Arial, sans-serif" font-size="25" font-weight="700">Live signal loop</text><text x="736" y="635" fill="#D4E3D6" font-family="Arial, sans-serif" font-size="19">Trigger.dev → ClickHouse</text><text x="736" y="665" fill="#D4E3D6" font-family="Arial, sans-serif" font-size="19">fresh data, visualized in context</text>
+  </g>
+  <text x="70" y="755" fill="#685F54" font-family="Arial, sans-serif" font-size="18">EvoDeck • AI-native collaborative canvas</text>
+</svg>

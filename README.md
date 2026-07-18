@@ -1,77 +1,99 @@
-# Echoes
+# EvoDeck
 
-AI-native collaborative canvas: chat responses become visual, interactive workspace widgets (OpenUI), with a scrubbable timeline. Trigger.dev orchestrates live sync jobs; ClickHouse stores the real-time event layer.
+> **An AI-native collaborative canvas that turns conversation into an evolving, interactive workspace.**
+
+![EvoDeck visual canvas](public/brand/evodeck-hero.svg)
+
+Most work begins as a conversation, then gets scattered across docs, tickets, dashboards, and chat. EvoDeck keeps the intent and the work in one place: describe the workspace you need, interact with what appears, refine a specific widget with an `@mention`, and rewind the workspace through its version history.
+
+## Why it matters
+
+EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning, decision-making, and collaboration.
+
+- **Start with intent:** turn a plain-language request into the right visual building blocks.
+- **Stay interactive:** generated controls, charts, forms, tables, and checklists are real UI—not a screenshot of UI.
+- **Evolve precisely:** every widget has an `@name`, so a focused request changes one thing without discarding the rest.
+- **Keep decision memory:** each meaningful change becomes a revision on a scrubbable timeline.
+- **Ground the canvas:** optional live data flows through Trigger.dev and ClickHouse instead of relying on invented facts.
+
+![EvoDeck architecture](docs/architecture.svg)
+
+## Demo in four moves
+
+![EvoDeck demo flow](docs/demo-flow.svg)
+
+1. Create a workspace and ask: “Create a launch command center with a checklist, content calendar, risks, and a decision flow.”
+2. Interact with the generated workspace—check an item, open a control, or rearrange a card.
+3. Update one widget directly: `@content-plan add a launch-day social post and make the first item high priority`.
+4. Scrub the timeline to show that the workspace remembers how the idea evolved.
+
+## Architecture
+
+| Layer                        | What it does                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| **Next.js + React**          | Delivers the collaborative, drag-and-drop workspace experience.                   |
+| **OpenUI**                   | Translates AI intent into valid, interactive generative UI.                       |
+| **AI orchestration**         | Routes requests into safe workspace operations and targeted widget updates.       |
+| **Postgres + Drizzle**       | Persists users, workspaces, collaborators, and revision history.                  |
+| **Trigger.dev + ClickHouse** | Runs background syncs and stores live-event signals for data-backed visual desks. |
 
 ## Stack
 
-- Next.js (App Router) + Postgres (Docker) + Drizzle
-- OpenUI generative UI (`@openuidev/*`)
-- Trigger.dev background jobs
-- ClickHouse Cloud analytics/events
+`Next.js` `React` `TypeScript` `OpenUI` `AI SDK` `Trigger.dev` `ClickHouse` `Postgres` `Drizzle ORM` `Zustand`
 
-## Setup
+## Run locally
 
 ```bash
 cp .env.example .env.local
-# fill AI_PROVIDER + provider keys, DATABASE_URL, TRIGGER_SECRET_KEY, CLICKHOUSE_*
+# Add an AI provider key and update any optional Trigger.dev / ClickHouse values.
+# Before deploying, set NEXT_PUBLIC_APP_URL to the public https URL for correct social-share links.
 
 docker compose up -d          # Postgres on :5433
 npm install
-npm run db:migrate:sql        # or apply drizzle/*.sql
-npm run clickhouse:events     # create events table
+npm run db:migrate:sql
+npm run db:seed               # optional: gives the demo a useful starting state
 npm run dev
-npm run trigger:dev           # separate terminal — local Trigger worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). To demonstrate background sync and live-data desks, start the Trigger.dev worker in a second terminal and initialize ClickHouse:
+
+```bash
+npm run clickhouse:init
+npm run clickhouse:events
+npm run trigger:dev
+```
 
 ### AI providers
 
-Set `AI_PROVIDER` in `.env.local` and restart `npm run dev`:
+Set `AI_PROVIDER` in `.env.local`, then restart the app:
 
-| Provider | Env | Notes |
-| --- | --- | --- |
-| `openai` (default) | `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `OPENAI_MODEL` | OpenAI, OpenRouter, or local LM Studio/Ollama |
-| `gemini` | `GEMINI_API_KEY`, optional `GEMINI_MODEL` | Google AI Studio — easiest Gemini path |
-| `vertex` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, ADC / `GOOGLE_APPLICATION_CREDENTIALS`, optional `VERTEX_MODEL` | Gemini on Vertex AI |
+| Provider           | Required environment                                                | Notes                                                                     |
+| ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `openai` (default) | `OPENAI_API_KEY`                                                    | Also supports OpenRouter, LM Studio, or Ollama through `OPENAI_BASE_URL`. |
+| `gemini`           | `GEMINI_API_KEY`                                                    | Direct Google AI Studio option.                                           |
+| `vertex`           | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, ADC or credentials | Set `VERTEX_MODEL` as needed.                                             |
 
-Example Vertex switch:
+## Useful scripts
 
-```bash
-AI_PROVIDER=vertex
-GOOGLE_CLOUD_PROJECT=my-gcp-project
-GOOGLE_CLOUD_LOCATION=us-central1
-VERTEX_MODEL=gemini-2.5-flash
-# gcloud auth application-default login
-```
+| Command                     | Purpose                                                     |
+| --------------------------- | ----------------------------------------------------------- |
+| `npm run dev`               | Run the EvoDeck app locally.                                |
+| `npm run trigger:dev`       | Start the local Trigger.dev worker.                         |
+| `npm run openui:generate`   | Refresh the committed server-safe OpenUI prompt and schema. |
+| `npm run clickhouse:init`   | Create the ClickHouse database.                             |
+| `npm run clickhouse:events` | Create the ClickHouse event table.                          |
+| `npm run db:seed`           | Add a demo workspace.                                       |
 
-## Scripts
+## Live data, when you need it
 
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` | Next.js app |
-| `npm run trigger:dev` | Trigger.dev worker |
-| `npm run openui:generate` | Regenerate OpenUI prompt/schema under `lib/openui/generated/` |
-| `npm run clickhouse:init` / `clickhouse:events` | ClickHouse bootstrap |
-| `npm run db:seed` | Seed data |
+EvoDeck can use source-backed data rather than asking the model to guess.
 
-## Live data
+## Project assets
 
-Chat can pull **real** external data (not LLM guesses) via adapters and an allowlisted fetch tool:
+The visual kit is deliberately lightweight, editable, and ready for the README, a pitch deck, or the deployed app:
 
-| Ask… | Source |
-| --- | --- |
-| Weather / forecast | Open-Meteo |
-| BTC, ETH, stocks (AAPL…) | CoinGecko / Stooq |
-| USD to EUR, FX | Frankfurter |
-| HN / GitHub / RSS | public APIs |
-| “what is X” | Wikipedia summary |
-| `fetch https://…` | Allowlisted `http_get` tool |
-
-API: `GET/POST /api/workspace/[id]/live` — status + refresh desk.
-
-## Notes
-
-- Never commit `.env.local` — only `.env.example`.
-- `lib/openui/generated/` is committed so the chat API can load the OpenUI schema without importing React UI on the server.
-- Widgets have `@name` handles — edit from the card, or mention them in chat (`@fruit-list add grapes`).
+- [EvoDeck mark](public/brand/evodeck-mark.svg)
+- [EvoDeck wordmark](public/brand/evodeck-wordmark.svg)
+- [Hero canvas artwork](public/brand/evodeck-hero.svg)
+- [Architecture diagram](docs/architecture.svg)
+- [Demo flow diagram](docs/demo-flow.svg)

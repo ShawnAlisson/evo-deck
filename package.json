@@ -1,9 +1,9 @@
 {
-  "name": "echoes",
+  "name": "evodeck",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "openui:generate": "node --input-type=module scripts/generate-openui-assets.mjs",
+    "openui:generate": "node scripts/generate-openui-assets.mjs",
     "dev": "next dev",
     "trigger:dev": "npx trigger.dev@latest dev",
     "build": "next build",
@@ -16,7 +16,7 @@
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "clickhouse:events": "node --env-file=.env.local scripts/init-clickhouse-events.mjs",
-    "db:migrate:sql": "docker exec -i echoes-postgres psql -U echoes -d echoes < drizzle/0000_flowery_unicorn.sql"
+    "db:migrate:sql": "docker exec -i evodeck-postgres psql -U evodeck -d evodeck < drizzle/0000_flowery_unicorn.sql"
   },
   "dependencies": {
     "@clickhouse/client": "^1.23.1",

@@ -54,7 +54,7 @@ export default function InviteAcceptPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <p className="echo-brand">Echoes</p>
+        <p className="evodeck-brand">EvoDeck</p>
         <h1>Workspace invite</h1>
         {info ? (
           <>
