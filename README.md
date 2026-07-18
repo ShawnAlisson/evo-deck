@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Echoes
 
-## Getting Started
+AI-native collaborative canvas: chat responses become visual, interactive workspace widgets (OpenUI), with a scrubbable timeline. Trigger.dev orchestrates live sync jobs; ClickHouse stores the real-time event layer.
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router) + Postgres (Docker) + Drizzle
+- OpenUI generative UI (`@openuidev/*`)
+- Trigger.dev background jobs
+- ClickHouse Cloud analytics/events
+
+## Setup
 
 ```bash
+cp .env.example .env.local
+# fill AI_PROVIDER + provider keys, DATABASE_URL, TRIGGER_SECRET_KEY, CLICKHOUSE_*
+
+docker compose up -d          # Postgres on :5433
+npm install
+npm run db:migrate:sql        # or apply drizzle/*.sql
+npm run clickhouse:events     # create events table
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run trigger:dev           # separate terminal — local Trigger worker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### AI providers
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set `AI_PROVIDER` in `.env.local` and restart `npm run dev`:
 
-## Learn More
+| Provider | Env | Notes |
+| --- | --- | --- |
+| `openai` (default) | `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `OPENAI_MODEL` | OpenAI, OpenRouter, or local LM Studio/Ollama |
+| `gemini` | `GEMINI_API_KEY`, optional `GEMINI_MODEL` | Google AI Studio — easiest Gemini path |
+| `vertex` | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, ADC / `GOOGLE_APPLICATION_CREDENTIALS`, optional `VERTEX_MODEL` | Gemini on Vertex AI |
 
-To learn more about Next.js, take a look at the following resources:
+Example Vertex switch:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+AI_PROVIDER=vertex
+GOOGLE_CLOUD_PROJECT=my-gcp-project
+GOOGLE_CLOUD_LOCATION=us-central1
+VERTEX_MODEL=gemini-2.5-flash
+# gcloud auth application-default login
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Next.js app |
+| `npm run trigger:dev` | Trigger.dev worker |
+| `npm run openui:generate` | Regenerate OpenUI prompt/schema under `lib/openui/generated/` |
+| `npm run clickhouse:init` / `clickhouse:events` | ClickHouse bootstrap |
+| `npm run db:seed` | Seed data |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Never commit `.env.local` — only `.env.example`.
+- `lib/openui/generated/` is committed so the chat API can load the OpenUI schema without importing React UI on the server.
+- Widgets have `@name` handles — edit from the card, or mention them in chat (`@fruit-list add grapes`).
