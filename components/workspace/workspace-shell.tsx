@@ -22,6 +22,8 @@ import {
   nextWidgetFrame,
 } from "@/lib/workspace/naming";
 import { isLiveDataBusyMessage } from "@/lib/workspace/data-intent";
+import { chatMessageFromAction } from "@/lib/openui/action-message";
+import type { ActionEvent } from "@openuidev/react-lang";
 
 type RevisionRow = TimelineRevision & { snapshot: WorkspaceSnapshot };
 type PresenceUser = {
@@ -253,6 +255,14 @@ export function WorkspaceShell() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleGenUiAction(widget: WorkspaceWidget, event: ActionEvent) {
+    if (!canEdit || busy) return;
+    const mention = widget.name || widget.id;
+    const message = chatMessageFromAction(event, mention);
+    if (!message) return;
+    void sendChat(message);
   }
 
   async function addNoteWidget(message: string) {
@@ -665,6 +675,7 @@ export function WorkspaceShell() {
           interactive={live && !busy && canEdit}
           onCommit={commitLayout}
           onSelectedChange={onSelectedChange}
+          onGenUiAction={handleGenUiAction}
         />
       </div>
 

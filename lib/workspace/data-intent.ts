@@ -76,12 +76,14 @@ export function detectLiveDataIntent(message: string): LiveDataIntent | null {
     };
   }
 
-  // FX before markets so "USD to EUR" doesn't become a crypto query
+  // FX before markets so "USD to EUR" doesn't become a crypto query.
+  // Require separators around "to" so "new todos" / "add todos" don't match as NEW→DOS.
   if (
     /\b(exchange rate|forex|\bfx\b|currency convert|convert\s+\d|usd\s+to\s+|eur\s+to\s+|gbp\s+to\s+)/.test(
       lower,
     ) ||
-    /\b[a-z]{3}\s*(?:to|\/|->)\s*[a-z]{3}\b/.test(lower)
+    /\b[a-z]{3}\s*(?:\/|->)\s*[a-z]{3}\b/.test(lower) ||
+    /\b[a-z]{3}\s+to\s+[a-z]{3}\b/.test(lower)
   ) {
     return {
       kind: "sync",

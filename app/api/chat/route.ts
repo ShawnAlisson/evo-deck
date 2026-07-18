@@ -13,6 +13,7 @@ import {
   appendRevision,
 } from "@/lib/workspace/timeline";
 import { emptySnapshot } from "@/lib/workspace/snapshot";
+import { parseMentions } from "@/lib/workspace/naming";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -77,9 +78,18 @@ export async function POST(request: Request) {
         liveData.dashboard.metrics.length > 0 ||
         Boolean(liveData.dashboard.rich));
 
+    // @mention + UI edit ("add a button", checklist, form…) must update that
+    // widget — never replace the canvas with a live FX/markets desk.
+    const mentioned = parseMentions(body.message, snapshot.widgets);
+    const looksLikeCanvasUiEdit =
+      mentioned.length > 0 &&
+      /\b(button|form|input|checkbox|checklist|to-?dos?|tabs?|accordion|card|widget|ui)\b/i.test(
+        body.message,
+      );
+
     // Live intents: lay out a deterministic desk from real fetched data.
     // Don't rely on the LLM to copy numbers — it often invents a GenUI instead.
-    if (intent && hasLiveDesk && liveData) {
+    if (intent && hasLiveDesk && liveData && !looksLikeCanvasUiEdit) {
       assistantMessage = `Pulled live data via ${liveData.via} (${liveData.dashboard.eventCount} events). ${liveData.detail}`;
       nextSnapshot = snapshotFromLiveData(snapshot, liveData);
     } else if (!isAiConfigured()) {

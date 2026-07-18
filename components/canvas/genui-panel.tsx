@@ -1,6 +1,6 @@
 "use client";
 
-import { Renderer } from "@openuidev/react-lang";
+import { Renderer, type ActionEvent } from "@openuidev/react-lang";
 import { openuiLibrary } from "@openuidev/react-ui/genui-lib";
 import "@openuidev/react-ui/components.css";
 import "@openuidev/react-ui/styles/index.css";
@@ -25,10 +25,12 @@ export function GenUiPanel({
   response,
   initialState,
   onStateUpdate,
+  onAction,
 }: {
   response: string;
   initialState?: Record<string, unknown>;
   onStateUpdate?: (state: Record<string, unknown>) => void;
+  onAction?: (event: ActionEvent) => void;
 }) {
   return (
     <div className="echo-genui">
@@ -38,6 +40,7 @@ export function GenUiPanel({
           library={openuiLibrary}
           initialState={initialState}
           onStateUpdate={onStateUpdate}
+          onAction={onAction}
           onError={(error) => {
             if (isBenignOpenUiError(error)) return;
             console.error("OpenUI render error:", error);

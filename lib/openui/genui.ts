@@ -37,6 +37,7 @@ const ECHOES_INTERACTION_RULES = `## Echoes interaction rules
 - To mark an item done on an existing list: keep all CheckBoxItems and set the 4th arg defaultChecked to true for that item only, e.g. milk = CheckBoxItem("Milk", "", "milk", true)
 - Prefer real interactive controls (CheckBoxGroup, Form fields, Buttons with Action, Tabs, Accordion) over decorative text.
 - Stack takes at most 6 positional args: children, direction?, gap?, align?, justify?, wrap?. Put ALL children in the first array arg — never pass siblings as extra Stack args.
+- To let users add checklist items: Form + Input bound to $newTodo + Button Action([@ToAssistant("Add to-do: " + $newTodo)]). Bind the Input value: Input("newTodo", "e.g. Milk", "text", { required: true, minLength: 2 }, $newTodo). Do NOT rely on unbound $vars in Action strings.
 - Example checklist:
   apple = CheckBoxItem("Apple", "", "apple")
   orange = CheckBoxItem("Orange", "", "orange")

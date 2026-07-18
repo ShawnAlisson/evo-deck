@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ActionEvent } from "@openuidev/react-lang";
 import type {
   WorkspaceSnapshot,
   WorkspaceWidget,
@@ -53,6 +54,7 @@ export function WorkspaceCanvas({
   interactive,
   onCommit,
   onSelectedChange,
+  onGenUiAction,
 }: {
   snapshot: WorkspaceSnapshot;
   interactive: boolean;
@@ -61,6 +63,7 @@ export function WorkspaceCanvas({
     meta?: { label?: string },
   ) => void | Promise<void>;
   onSelectedChange?: (widget: WorkspaceWidget | null) => void;
+  onGenUiAction?: (widget: WorkspaceWidget, event: ActionEvent) => void;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -387,6 +390,11 @@ export function WorkspaceCanvas({
             widget={widget}
             selected={selectedId === widget.id}
             onUiState={(state) => scheduleUiState(widget.id, state)}
+            onAction={
+              onGenUiAction
+                ? (event) => onGenUiAction(widget, event)
+                : undefined
+            }
             onPointerDown={(e) => {
               if (e.button === 2) return;
               // Always select on click, even when hitting interactive GenUI controls

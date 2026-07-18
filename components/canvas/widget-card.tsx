@@ -1,5 +1,6 @@
 "use client";
 
+import type { ActionEvent } from "@openuidev/react-lang";
 import type { WorkspaceWidget } from "@/lib/workspace/snapshot";
 import type { FlowEdge, FlowNode } from "@/lib/workspace/flowchart";
 import { GenUiPanel } from "@/components/canvas/genui-panel";
@@ -61,11 +62,13 @@ export function WidgetCard({
   selected,
   onPointerDown,
   onUiState,
+  onAction,
 }: {
   widget: WorkspaceWidget;
   selected?: boolean;
   onPointerDown?: (e: React.PointerEvent) => void;
   onUiState?: (state: Record<string, unknown>) => void;
+  onAction?: (event: ActionEvent) => void;
 }) {
   const mention = widget.name || widget.id;
 
@@ -81,7 +84,7 @@ export function WidgetCard({
         </div>
       </header>
       <div className="echo-widget-body" data-no-drag>
-        {renderBody(widget, onUiState)}
+        {renderBody(widget, onUiState, onAction)}
       </div>
       <div className="echo-resize-handle" data-resize />
     </div>
@@ -91,6 +94,7 @@ export function WidgetCard({
 function renderBody(
   widget: WorkspaceWidget,
   onUiState?: (state: Record<string, unknown>) => void,
+  onAction?: (event: ActionEvent) => void,
 ) {
   switch (widget.type) {
     case "metric": {
@@ -241,6 +245,7 @@ function renderBody(
           response={response}
           initialState={uiState}
           onStateUpdate={onUiState}
+          onAction={onAction}
         />
       );
     }
