@@ -4,7 +4,17 @@
 
 ![EvoDeck visual canvas](public/brand/evodeck-hero.svg)
 
-Most work begins as a conversation, then gets scattered across docs, tickets, dashboards, and chat. EvoDeck keeps the intent and the work in one place: describe the workspace you need, interact with what appears, refine a specific widget with an `@mention`, and rewind the workspace through its version history.
+## Description
+
+EvoDeck is an AI-native collaborative canvas that turns conversation into an evolving, interactive workspace. Teams describe the workspace they need in plain language, refine individual widgets with `@mentions`, and scrub through a timeline that preserves important decisions.
+
+Most work starts as a conversation, but traditional workspace tools make teams translate that conversation into rigid templates, dashboards, and documents by hand. EvoDeck removes that gap by generating the visual, interactive building blocks that fit the job—whether that means planning a launch, organising a research sprint, or running a weekly operating review.
+
+Under the hood, EvoDeck combines generative UI, durable workspace revisions, real-time collaboration primitives, Trigger.dev background orchestration, and ClickHouse-backed live signals. The result is a workspace that grows with the conversation—not a chatbot next to a dashboard.
+
+## Tags
+
+`AI` · `Generative UI` · `Collaboration` · `Productivity` · `OpenUI` · `Next.js` · `Trigger.dev` · `ClickHouse` · `Postgres` · `Developer Tools`
 
 ## Why it matters
 
@@ -37,7 +47,7 @@ EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning
 | **Postgres + Drizzle**       | Persists users, workspaces, collaborators, and revision history.                  |
 | **Trigger.dev + ClickHouse** | Runs background syncs and stores live-event signals for data-backed visual desks. |
 
-## Stack
+## Built with
 
 `Next.js` `React` `TypeScript` `OpenUI` `AI SDK` `Trigger.dev` `ClickHouse` `Postgres` `Drizzle ORM` `Zustand`
 
