@@ -455,6 +455,16 @@ export function WorkspaceShell() {
     }
   }
 
+  function requestContinueFromPlayhead() {
+    const rev = revisions[Math.floor(playhead)];
+    if (!rev) return;
+    setConfirmAction({
+      type: "continue-from",
+      seq: rev.seq,
+      label: rev.label ?? `#${rev.seq}`,
+    });
+  }
+
   async function runConfirmedAction() {
     if (!confirmAction) return;
     setConfirmBusy(true);
@@ -724,15 +734,7 @@ export function WorkspaceShell() {
                   className="timeline-continue"
                   disabled={busy}
                   title="Discard later frames and continue from this point"
-                  onClick={() => {
-                    const rev = revisions[Math.floor(playhead)];
-                    if (!rev) return;
-                    setConfirmAction({
-                      type: "continue-from",
-                      seq: rev.seq,
-                      label: rev.label ?? `#${rev.seq}`,
-                    });
-                  }}
+                  onClick={requestContinueFromPlayhead}
                 >
                   Continue here
                 </button>
@@ -781,6 +783,17 @@ export function WorkspaceShell() {
             >
               <TimelineIcon />
             </button>
+            {!live && canEdit ? (
+              <button
+                type="button"
+                className="timeline-continue timeline-continue-idle"
+                disabled={busy}
+                title="Continue from the selected timeline frame"
+                onClick={requestContinueFromPlayhead}
+              >
+                Continue here
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
