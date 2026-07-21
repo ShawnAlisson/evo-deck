@@ -75,7 +75,7 @@ export function WidgetEditor({
 
   const sourceLabel =
     widget.type === "genui"
-      ? "OpenUI source"
+      ? "Source"
       : widget.type === "chart"
         ? "Chart data (JSON)"
         : widget.type === "flowchart"
