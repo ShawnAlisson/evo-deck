@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  createTimelineBranch,
-  getWorkspace,
+  createScenarioBranch,
   listTimelineBranches,
 } from "@/lib/workspace/timeline";
 import { requireWorkspaceAccess } from "@/lib/workspace/access";
@@ -13,6 +12,7 @@ const bodySchema = z.object({
   workspaceId: z.string().uuid(),
   name: z.string().min(1).max(200),
   fromSeq: z.number().int().positive(),
+  parentBranchId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(request: Request) {
@@ -40,12 +40,19 @@ export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
     await requireWorkspaceAccess(body.workspaceId, "editor");
-    const workspace = await getWorkspace(body.workspaceId);
-    if (!workspace) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const scenario = await createScenarioBranch({
+      workspaceId: body.workspaceId,
+      fromSeq: body.fromSeq,
+      name: body.name,
+      parentBranchId: body.parentBranchId ?? null,
+    });
+    if (!scenario) {
+      return NextResponse.json(
+        { error: "The selected frame is not on this timeline path" },
+        { status: 409 },
+      );
     }
-    const branch = await createTimelineBranch(body);
-    return NextResponse.json({ branch });
+    return NextResponse.json(scenario, { status: 201 });
   } catch (error) {
     if (error instanceof Response) return error;
     return NextResponse.json(

@@ -16,7 +16,7 @@
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "clickhouse:events": "node --env-file=.env.local scripts/init-clickhouse-events.mjs",
-    "db:migrate:sql": "docker exec -i evodeck-postgres psql -U evodeck -d evodeck < drizzle/0000_flowery_unicorn.sql"
+    "db:migrate:sql": "docker exec -i evodeck-postgres psql -v ON_ERROR_STOP=1 -U evodeck -d evodeck < drizzle/0000_flowery_unicorn.sql && docker exec -i evodeck-postgres psql -v ON_ERROR_STOP=1 -U evodeck -d evodeck < drizzle/0001_collaborators.sql && docker exec -i evodeck-postgres psql -v ON_ERROR_STOP=1 -U evodeck -d evodeck < drizzle/0002_timeline_branches.sql"
   },
   "dependencies": {
     "@clickhouse/client": "^1.23.1",

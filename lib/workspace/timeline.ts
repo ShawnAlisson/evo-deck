@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   chatMessages,
@@ -16,6 +16,19 @@ import {
 } from "@/lib/workspace/snapshot";
 
 export type RevisionCause = "chat" | "user_edit" | "system";
+
+function branchScope<T extends { workspaceId: unknown; branchId: unknown }>(
+  table: T,
+  workspaceId: string,
+  branchId: string | null,
+) {
+  return branchId
+    ? and(
+        eq(table.workspaceId as never, workspaceId),
+        eq(table.branchId as never, branchId),
+      )
+    : and(eq(table.workspaceId as never, workspaceId), isNull(table.branchId as never));
+}
 
 export async function getWorkspace(workspaceId: string) {
   const rows = await db
@@ -39,11 +52,14 @@ export async function listRevisions(workspaceId: string) {
   }));
 }
 
-export async function getLatestRevision(workspaceId: string) {
+export async function getLatestRevision(
+  workspaceId: string,
+  branchId: string | null = null,
+) {
   const rows = await db
     .select()
     .from(workspaceRevisions)
-    .where(eq(workspaceRevisions.workspaceId, workspaceId))
+    .where(branchScope(workspaceRevisions, workspaceId, branchId))
     .orderBy(desc(workspaceRevisions.seq))
     .limit(1);
 
@@ -73,26 +89,14 @@ export async function getRevisionAtSeq(workspaceId: string, seq: number) {
   };
 }
 
-/** Truncate forward (like undo history) when editing from a past playhead. */
-export async function truncateForward(workspaceId: string, afterSeq: number) {
-  await db
-    .delete(workspaceRevisions)
-    .where(
-      and(
-        eq(workspaceRevisions.workspaceId, workspaceId),
-        gt(workspaceRevisions.seq, afterSeq),
-      ),
-    );
-}
-
 export async function appendRevision(input: {
   workspaceId: string;
+  /** Null writes to the main timeline; a branch id writes to that scenario. */
+  branchId?: string | null;
   cause: RevisionCause;
   snapshot: WorkspaceSnapshot;
   messageId?: string | null;
   label?: string | null;
-  /** If set, truncate revisions after this seq before appending. */
-  fromSeq?: number | null;
 }) {
   const snapshot = workspaceSnapshotSchema.parse(input.snapshot);
   const messageId =
@@ -111,33 +115,15 @@ export async function appendRevision(input: {
       .orderBy(desc(workspaceRevisions.seq))
       .limit(1);
 
-    const latestSeq = latestRows[0]?.seq ?? 0;
-
-    // Only truncate when editing from a past playhead (not when appending at head)
-    if (input.fromSeq != null && input.fromSeq < latestSeq) {
-      await tx
-        .delete(workspaceRevisions)
-        .where(
-          and(
-            eq(workspaceRevisions.workspaceId, input.workspaceId),
-            gt(workspaceRevisions.seq, input.fromSeq),
-          ),
-        );
-    }
-
-    const afterTruncate = await tx
-      .select({ seq: workspaceRevisions.seq })
-      .from(workspaceRevisions)
-      .where(eq(workspaceRevisions.workspaceId, input.workspaceId))
-      .orderBy(desc(workspaceRevisions.seq))
-      .limit(1);
-
-    const nextSeq = (afterTruncate[0]?.seq ?? 0) + 1;
+    // Timelines are append-only. Sequences remain global within a workspace so
+    // a branch can point to one unambiguous inherited frame.
+    const nextSeq = (latestRows[0]?.seq ?? 0) + 1;
 
     const [revision] = await tx
       .insert(workspaceRevisions)
       .values({
         workspaceId: input.workspaceId,
+        branchId: input.branchId ?? null,
         seq: nextSeq,
         cause: input.cause,
         messageId,
@@ -208,6 +194,38 @@ export async function duplicateWorkspace(input: {
       role: "owner",
     });
 
+    const branches = await tx
+      .select()
+      .from(timelineBranches)
+      .where(eq(timelineBranches.workspaceId, source.id));
+    const branchIds = new Map<string, string>();
+
+    for (const branch of branches) {
+      const [copy] = await tx
+        .insert(timelineBranches)
+        .values({
+          workspaceId: workspace.id,
+          name: branch.name,
+          fromSeq: branch.fromSeq,
+          parentBranchId: null,
+          createdAt: branch.createdAt,
+        })
+        .returning({ id: timelineBranches.id });
+      branchIds.set(branch.id, copy.id);
+    }
+
+    for (const branch of branches) {
+      if (!branch.parentBranchId) continue;
+      const branchId = branchIds.get(branch.id);
+      const parentBranchId = branchIds.get(branch.parentBranchId);
+      if (branchId && parentBranchId) {
+        await tx
+          .update(timelineBranches)
+          .set({ parentBranchId })
+          .where(eq(timelineBranches.id, branchId));
+      }
+    }
+
     const messages = await tx
       .select()
       .from(chatMessages)
@@ -220,6 +238,9 @@ export async function duplicateWorkspace(input: {
         .insert(chatMessages)
         .values({
           workspaceId: workspace.id,
+          branchId: message.branchId
+            ? (branchIds.get(message.branchId) ?? null)
+            : null,
           role: message.role,
           content: message.content,
           createdAt: message.createdAt,
@@ -237,6 +258,9 @@ export async function duplicateWorkspace(input: {
       await tx.insert(workspaceRevisions).values(
         revisions.map((revision) => ({
           workspaceId: workspace.id,
+          branchId: revision.branchId
+            ? (branchIds.get(revision.branchId) ?? null)
+            : null,
           seq: revision.seq,
           cause: revision.cause,
           messageId: revision.messageId
@@ -247,21 +271,6 @@ export async function duplicateWorkspace(input: {
           ),
           label: revision.label,
           createdAt: revision.createdAt,
-        })),
-      );
-    }
-
-    const branches = await tx
-      .select()
-      .from(timelineBranches)
-      .where(eq(timelineBranches.workspaceId, source.id));
-    if (branches.length > 0) {
-      await tx.insert(timelineBranches).values(
-        branches.map((branch) => ({
-          workspaceId: workspace.id,
-          name: branch.name,
-          fromSeq: branch.fromSeq,
-          createdAt: branch.createdAt,
         })),
       );
     }
@@ -287,16 +296,20 @@ export async function duplicateWorkspace(input: {
   });
 }
 
-export async function listMessages(workspaceId: string) {
+export async function listMessages(
+  workspaceId: string,
+  branchId: string | null = null,
+) {
   return db
     .select()
     .from(chatMessages)
-    .where(eq(chatMessages.workspaceId, workspaceId))
+    .where(branchScope(chatMessages, workspaceId, branchId))
     .orderBy(asc(chatMessages.createdAt));
 }
 
 export async function addMessage(input: {
   workspaceId: string;
+  branchId?: string | null;
   role: "user" | "assistant" | "system";
   content: string;
 }) {
@@ -304,6 +317,7 @@ export async function addMessage(input: {
     .insert(chatMessages)
     .values({
       workspaceId: input.workspaceId,
+      branchId: input.branchId ?? null,
       role: input.role,
       content: input.content,
     })
@@ -311,20 +325,107 @@ export async function addMessage(input: {
   return message;
 }
 
-export async function createTimelineBranch(input: {
+/**
+ * Add a selectable, in-workspace timeline branch. The first branch revision
+ * copies the fork-point snapshot so it is immediately a writable live head.
+ */
+export async function createScenarioBranch(input: {
   workspaceId: string;
   name: string;
   fromSeq: number;
+  parentBranchId?: string | null;
 }) {
-  const [branch] = await db
-    .insert(timelineBranches)
-    .values({
-      workspaceId: input.workspaceId,
-      name: input.name,
-      fromSeq: input.fromSeq,
-    })
-    .returning();
-  return branch;
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${input.workspaceId}))`,
+    );
+
+    const [forkPoint] = await tx
+      .select()
+      .from(workspaceRevisions)
+      .where(
+        and(
+          eq(workspaceRevisions.workspaceId, input.workspaceId),
+          eq(workspaceRevisions.seq, input.fromSeq),
+        ),
+      )
+      .limit(1);
+    if (!forkPoint) return null;
+
+    if (input.parentBranchId) {
+      const branchPath = await tx
+        .select({
+          id: timelineBranches.id,
+          fromSeq: timelineBranches.fromSeq,
+          parentBranchId: timelineBranches.parentBranchId,
+        })
+        .from(timelineBranches)
+        .where(eq(timelineBranches.workspaceId, input.workspaceId));
+      const byId = new Map(branchPath.map((branch) => [branch.id, branch]));
+      let current = byId.get(input.parentBranchId);
+      let isOnPath = false;
+
+      // A selected branch contains all of its own revisions, plus each
+      // ancestor only through the exact fork frame. This validates the same
+      // path the client renders and rejects accidental sibling attachments.
+      while (current) {
+        if (forkPoint.branchId === current.id) {
+          isOnPath = true;
+          break;
+        }
+        if (forkPoint.seq > current.fromSeq) break;
+        if (!current.parentBranchId) {
+          isOnPath = forkPoint.branchId == null;
+          break;
+        }
+        current = byId.get(current.parentBranchId);
+      }
+      if (!isOnPath) return null;
+    } else if (forkPoint.branchId != null) {
+      // A branch must explicitly identify the branch being viewed, so a
+      // client cannot attach a scenario to an unrelated frame.
+      return null;
+    }
+
+    const name = input.name.trim().slice(0, 200) || "Scenario";
+    const [branch] = await tx
+      .insert(timelineBranches)
+      .values({
+        workspaceId: input.workspaceId,
+        name,
+        fromSeq: input.fromSeq,
+        parentBranchId: input.parentBranchId ?? null,
+      })
+      .returning();
+
+    const latestRows = await tx
+      .select({ seq: workspaceRevisions.seq })
+      .from(workspaceRevisions)
+      .where(eq(workspaceRevisions.workspaceId, input.workspaceId))
+      .orderBy(desc(workspaceRevisions.seq))
+      .limit(1);
+    const snapshot = normalizeSnapshot(
+      workspaceSnapshotSchema.parse(forkPoint.snapshot),
+    );
+    const [revision] = await tx
+      .insert(workspaceRevisions)
+      .values({
+        workspaceId: input.workspaceId,
+        branchId: branch.id,
+        seq: (latestRows[0]?.seq ?? 0) + 1,
+        cause: "system",
+        snapshot,
+        label: `Scenario · ${name}`,
+      })
+      .returning();
+
+    await tx
+      .update(workspaces)
+      .set({ updatedAt: sql`now()` })
+      .where(eq(workspaces.id, input.workspaceId));
+
+    return { branch, revision: { ...revision, snapshot } };
+  });
 }
 
 export async function listTimelineBranches(workspaceId: string) {
@@ -333,4 +434,21 @@ export async function listTimelineBranches(workspaceId: string) {
     .from(timelineBranches)
     .where(eq(timelineBranches.workspaceId, workspaceId))
     .orderBy(desc(timelineBranches.createdAt));
+}
+
+export async function getTimelineBranch(
+  workspaceId: string,
+  branchId: string,
+) {
+  const rows = await db
+    .select()
+    .from(timelineBranches)
+    .where(
+      and(
+        eq(timelineBranches.workspaceId, workspaceId),
+        eq(timelineBranches.id, branchId),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
 }

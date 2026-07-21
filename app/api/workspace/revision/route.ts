@@ -5,17 +5,18 @@ import { requireWorkspaceAccess } from "@/lib/workspace/access";
 import {
   appendRevision,
   getLatestRevision,
-  getRevisionAtSeq,
+  getTimelineBranch,
 } from "@/lib/workspace/timeline";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
   workspaceId: z.string().uuid(),
+  branchId: z.string().uuid().nullable().optional(),
   snapshot: workspaceSnapshotSchema.optional(),
   fromSeq: z.number().int().positive().optional(),
   label: z.string().optional(),
-  /** Discard everything after this seq and make that frame the live head. */
+  /** Legacy field retained for old clients; historical edits are no longer destructive. */
   continueFromSeq: z.number().int().positive().optional(),
 });
 
@@ -23,34 +24,21 @@ export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
     await requireWorkspaceAccess(body.workspaceId, "editor");
+    const branchId = body.branchId ?? null;
+    if (branchId && !(await getTimelineBranch(body.workspaceId, branchId))) {
+      return NextResponse.json({ error: "Branch not found" }, { status: 404 });
+    }
 
-    const latest = await getLatestRevision(body.workspaceId);
+    const latest = await getLatestRevision(body.workspaceId, branchId);
 
     if (body.continueFromSeq != null) {
-      const base = await getRevisionAtSeq(
-        body.workspaceId,
-        body.continueFromSeq,
+      return NextResponse.json(
+        {
+          error:
+            "Historical frames are read-only. Create a scenario to explore an alternate future.",
+        },
+        { status: 409 },
       );
-      if (!base) {
-        return NextResponse.json(
-          { error: "Revision not found" },
-          { status: 404 },
-        );
-      }
-      if (latest && body.continueFromSeq >= latest.seq) {
-        return NextResponse.json({ revision: latest, alreadyLive: true });
-      }
-
-      const revision = await appendRevision({
-        workspaceId: body.workspaceId,
-        cause: "user_edit",
-        snapshot: base.snapshot,
-        fromSeq: body.continueFromSeq,
-        label:
-          body.label ??
-          `Continued from #${body.continueFromSeq}${base.label ? ` (${base.label})` : ""}`,
-      });
-      return NextResponse.json({ revision });
     }
 
     if (!body.snapshot) {
@@ -60,14 +48,21 @@ export async function POST(request: Request) {
       );
     }
 
+    if (body.fromSeq != null && latest && body.fromSeq < latest.seq) {
+      return NextResponse.json(
+        {
+          error:
+            "This is a historical frame. Create a scenario before changing it.",
+        },
+        { status: 409 },
+      );
+    }
+
     const revision = await appendRevision({
       workspaceId: body.workspaceId,
+      branchId,
       cause: "user_edit",
       snapshot: body.snapshot,
-      fromSeq:
-        body.fromSeq != null && latest && body.fromSeq < latest.seq
-          ? body.fromSeq
-          : null,
       label: body.label ?? "Manual layout",
     });
 

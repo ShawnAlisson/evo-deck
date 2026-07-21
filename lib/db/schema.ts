@@ -49,6 +49,8 @@ export const chatMessages = pgTable("chat_messages", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
+  /** Null is the main timeline; a value belongs to an alternate branch. */
+  branchId: uuid("branch_id"),
   role: messageRoleEnum("role").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -63,6 +65,8 @@ export const workspaceRevisions = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    /** Null is the main timeline; a value belongs to an alternate branch. */
+    branchId: uuid("branch_id"),
     seq: integer("seq").notNull(),
     cause: revisionCauseEnum("cause").notNull(),
     messageId: uuid("message_id").references(() => chatMessages.id, {
@@ -89,6 +93,8 @@ export const timelineBranches = pgTable("timeline_branches", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 200 }).notNull(),
   fromSeq: integer("from_seq").notNull(),
+  /** Null means this branch forks from the main timeline. */
+  parentBranchId: uuid("parent_branch_id"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -22,11 +22,11 @@ export default async function LandingPage() {
       <main className="landing-hero">
         <div className="landing-copy">
           <p className="evodeck-brand landing-hero-brand">EvoDeck</p>
-          <h1>Your workspace, shaped by conversation.</h1>
+          <h1>Your decisions, open to better futures.</h1>
           <p className="landing-lead">
             Stop configuring dashboards. Describe what you need—EvoDeck builds
-            a live canvas of widgets, timelines, and signals, then keeps it
-            moving with you.
+            a live canvas of widgets, timelines, and signals, then lets your
+            team explore alternate futures without rewriting history.
           </p>
           <div className="landing-actions">
             <Link className="landing-cta large" href="/signup">

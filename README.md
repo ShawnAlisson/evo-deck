@@ -1,12 +1,12 @@
 # EvoDeck
 
-> **An AI-native collaborative canvas that turns conversation into an evolving, interactive workspace.**
+> **An AI-native collaborative canvas that turns conversation into an evolving, interactive decision workspace.**
 
 ![EvoDeck visual canvas](public/brand/evodeck-hero.svg)
 
 ## Description
 
-EvoDeck is an AI-native collaborative canvas that turns conversation into an evolving, interactive workspace. Teams describe the workspace they need in plain language, refine individual widgets with `@mentions`, and scrub through a timeline that preserves important decisions.
+EvoDeck is an AI-native collaborative canvas that turns conversation into an evolving, interactive decision workspace. Teams describe the workspace they need in plain language, refine individual widgets with `@mentions`, scrub through a timeline that preserves important decisions, and explore alternate futures without overwriting what happened.
 
 Most work starts as a conversation, but traditional workspace tools make teams translate that conversation into rigid templates, dashboards, and documents by hand. EvoDeck removes that gap by generating the visual, interactive building blocks that fit the job—whether that means planning a launch, organising a research sprint, or running a weekly operating review.
 
@@ -24,6 +24,7 @@ EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning
 - **Stay interactive:** generated controls, charts, forms, tables, and checklists are real UI—not a screenshot of UI.
 - **Evolve precisely:** every widget has an `@name`, so a focused request changes one thing without discarding the rest.
 - **Keep decision memory:** each meaningful change becomes a revision on a scrubbable timeline.
+- **Explore safely:** fork any historical frame into a collaborative scenario—without deleting the main timeline.
 - **Ground the canvas:** optional live data flows through Trigger.dev and ClickHouse instead of relying on invented facts.
 
 ![EvoDeck architecture](docs/architecture.svg)
@@ -35,7 +36,7 @@ EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning
 1. Create a workspace and ask: “Create a launch command center with a checklist, content calendar, risks, and a decision flow.”
 2. Interact with the generated workspace—check an item, open a control, or rearrange a card.
 3. Update one widget directly: `@content-plan add a launch-day social post and make the first item high priority`.
-4. Scrub the timeline to show that the workspace remembers how the idea evolved.
+4. Scrub the timeline, choose **Explore scenario**, and compare a new direction without changing the original decision trail.
 
 ## Architecture
 
@@ -60,7 +61,7 @@ cp .env.example .env.local
 
 docker compose up -d          # Postgres on :5433
 npm install
-npm run db:migrate:sql
+npm run db:migrate:sql        # base schema + collaborators + timeline branches
 npm run db:seed               # optional: gives the demo a useful starting state
 npm run dev
 ```

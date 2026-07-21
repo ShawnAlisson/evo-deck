@@ -25,7 +25,16 @@ import { isLiveDataBusyMessage } from "@/lib/workspace/data-intent";
 import { chatMessageFromAction } from "@/lib/openui/action-message";
 import type { ActionEvent } from "@openuidev/react-lang";
 
-type RevisionRow = TimelineRevision & { snapshot: WorkspaceSnapshot };
+type RevisionRow = TimelineRevision & {
+  snapshot: WorkspaceSnapshot;
+  branchId: string | null;
+};
+type TimelineBranch = {
+  id: string;
+  name: string;
+  fromSeq: number;
+  parentBranchId: string | null;
+};
 type PresenceUser = {
   userId: string;
   name: string | null;
@@ -42,6 +51,31 @@ type Me = { id: string; email: string; name: string | null };
 
 type DockMode = "idle" | "keyboard" | "timeline";
 
+function timelineForBranch(
+  revisions: RevisionRow[],
+  branches: TimelineBranch[],
+  branchId: string | null,
+  visited = new Set<string>(),
+): RevisionRow[] {
+  if (!branchId) {
+    return revisions.filter((revision) => revision.branchId == null);
+  }
+
+  const branch = branches.find((item) => item.id === branchId);
+  if (!branch || visited.has(branchId)) return [];
+
+  const nextVisited = new Set(visited);
+  nextVisited.add(branchId);
+  const inherited = timelineForBranch(
+    revisions,
+    branches,
+    branch.parentBranchId,
+    nextVisited,
+  ).filter((revision) => revision.seq <= branch.fromSeq);
+  const own = revisions.filter((revision) => revision.branchId === branch.id);
+  return [...inherited, ...own].sort((a, b) => a.seq - b.seq);
+}
+
 export function WorkspaceShell() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -50,6 +84,8 @@ export function WorkspaceShell() {
   const [me, setMe] = useState<Me | null>(null);
   const [role, setRole] = useState<string>("viewer");
   const [revisions, setRevisions] = useState<RevisionRow[]>([]);
+  const [branches, setBranches] = useState<TimelineBranch[]>([]);
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [playhead, setPlayhead] = useState(0);
@@ -71,11 +107,15 @@ export function WorkspaceShell() {
   );
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [scenarioFork, setScenarioFork] = useState<
+    | null
+    | { seq: number; label: string; parentBranchId: string | null }
+  >(null);
+  const [scenarioName, setScenarioName] = useState("");
   const [confirmAction, setConfirmAction] = useState<
     | null
     | { type: "remove"; userId: string; label: string }
     | { type: "delete-workspace" }
-    | { type: "continue-from"; seq: number; label: string }
   >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const committingRef = useRef(false);
@@ -101,10 +141,20 @@ export function WorkspaceShell() {
       const full = await detail.json();
       setRole(full.role);
       setMembers(full.members ?? []);
-      setRevisions(full.revisions);
-      if (stickToHead) setPlayhead(Math.max(0, full.revisions.length - 1));
+      const nextRevisions = full.revisions ?? [];
+      const nextBranches = full.branches ?? [];
+      setRevisions(nextRevisions);
+      setBranches(nextBranches);
+      if (stickToHead) {
+        const timeline = timelineForBranch(
+          nextRevisions,
+          nextBranches,
+          activeBranchId,
+        );
+        setPlayhead(Math.max(0, timeline.length - 1));
+      }
     },
-    [workspaceId, router],
+    [workspaceId, router, activeBranchId],
   );
 
   useEffect(() => {
@@ -191,10 +241,16 @@ export function WorkspaceShell() {
     });
   }, []);
 
-  const live = playhead >= revisions.length - 1 - 0.001;
+  const activeRevisions = useMemo(
+    () => timelineForBranch(revisions, branches, activeBranchId),
+    [revisions, branches, activeBranchId],
+  );
+  const live =
+    activeRevisions.length > 0 &&
+    playhead >= activeRevisions.length - 1 - 0.001;
   const viewSnapshot = useMemo(
-    () => snapshotAtPlayhead(revisions, playhead),
-    [revisions, playhead],
+    () => snapshotAtPlayhead(activeRevisions, playhead),
+    [activeRevisions, playhead],
   );
 
   const avatarPeople = useMemo(() => {
@@ -235,17 +291,25 @@ export function WorkspaceShell() {
 
   async function sendChat(message: string) {
     if (!canEdit || !message.trim()) return;
+    if (!live) {
+      setError("Historical frames are read-only. Create a scenario branch to change this moment.");
+      setDockMode("timeline");
+      return;
+    }
     setBusy(true);
     setBusyLabel(
       isLiveDataBusyMessage(message) ? "Fetching live data…" : "Thinking…",
     );
     setError(null);
     try {
-      const fromSeq = live ? undefined : revisions[Math.floor(playhead)]?.seq;
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId, message: message.trim(), fromSeq }),
+        body: JSON.stringify({
+          workspaceId,
+          branchId: activeBranchId,
+          message: message.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Chat failed");
@@ -270,6 +334,11 @@ export function WorkspaceShell() {
 
   async function addNoteWidget(message: string) {
     if (!canEdit || !message.trim() || committingRef.current) return;
+    if (!live) {
+      setError("Historical frames are read-only. Create a scenario branch to add to this moment.");
+      setDockMode("timeline");
+      return;
+    }
     const body = message.trim();
     const base = viewSnapshot.widgets ? viewSnapshot : emptySnapshot();
     const taken = new Set(base.widgets.map((w) => w.name));
@@ -294,14 +363,13 @@ export function WorkspaceShell() {
     setBusyLabel("Adding note…");
     setError(null);
     try {
-      const fromSeq = live ? undefined : revisions[Math.floor(playhead)]?.seq;
       const res = await fetch("/api/workspace/revision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
+          branchId: activeBranchId,
           snapshot: next,
-          fromSeq,
           label: `Note: ${body.slice(0, 48)}`,
         }),
       });
@@ -337,10 +405,15 @@ export function WorkspaceShell() {
 
     // Optimistic head update so the canvas snapshot matches the drag before the network returns
     setRevisions((prev) => {
-      if (prev.length === 0) return prev;
+      const index = prev.reduce(
+        (latest, revision, current) =>
+          revision.branchId === activeBranchId ? current : latest,
+        -1,
+      );
+      if (index < 0) return prev;
       const copy = [...prev];
-      const last = copy[copy.length - 1]!;
-      copy[copy.length - 1] = { ...last, snapshot: next };
+      const last = copy[index]!;
+      copy[index] = { ...last, snapshot: next };
       return copy;
     });
 
@@ -350,6 +423,7 @@ export function WorkspaceShell() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
+          branchId: activeBranchId,
           snapshot: next,
           label: meta?.label ?? "Manual layout",
         }),
@@ -361,7 +435,12 @@ export function WorkspaceShell() {
         const nextRevs = [...withoutDup, data.revision].sort(
           (a, b) => a.seq - b.seq,
         );
-        setPlayhead(Math.max(0, nextRevs.length - 1));
+        const timeline = timelineForBranch(
+          nextRevs,
+          branches,
+          activeBranchId,
+        );
+        setPlayhead(Math.max(0, timeline.length - 1));
         return nextRevs;
       });
     } catch (e) {
@@ -430,42 +509,54 @@ export function WorkspaceShell() {
     router.push("/workspaces");
   }
 
-  async function continueFromPlayhead(seq?: number) {
-    if (!canEdit || busy) return;
-    const targetSeq =
-      seq ?? revisions[Math.floor(playhead)]?.seq;
-    if (targetSeq == null) return;
+  function requestScenarioFromPlayhead() {
+    const rev = activeRevisions[Math.floor(playhead)];
+    if (!rev) return;
+    setScenarioName(`Explore ${rev.label ?? `frame #${rev.seq}`}`.slice(0, 200));
+    setScenarioFork({
+      seq: rev.seq,
+      label: rev.label ?? `Frame #${rev.seq}`,
+      parentBranchId: activeBranchId,
+    });
+  }
+
+  async function createScenario(event: React.FormEvent) {
+    event.preventDefault();
+    if (!canEdit || busy || !scenarioFork || !scenarioName.trim()) return;
     setBusy(true);
-    setBusyLabel("Restoring…");
+    setBusyLabel("Creating scenario…");
     setError(null);
     try {
-      const res = await fetch("/api/workspace/revision", {
+      const res = await fetch("/api/workspace/branch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
-          continueFromSeq: targetSeq,
+          fromSeq: scenarioFork.seq,
+          name: scenarioName.trim(),
+          parentBranchId: scenarioFork.parentBranchId,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not continue from here");
-      await refreshWorkspace(true);
-      setDockMode("idle");
+      if (!res.ok) throw new Error(data.error ?? "Could not create scenario");
+      setScenarioFork(null);
+      setBranches((previous) => [...previous, data.branch]);
+      setRevisions((previous) => {
+        const next = [...previous, data.revision].sort((a, b) => a.seq - b.seq);
+        const timeline = timelineForBranch(
+          next,
+          [...branches, data.branch],
+          data.branch.id,
+        );
+        setPlayhead(Math.max(0, timeline.length - 1));
+        return next;
+      });
+      setActiveBranchId(data.branch.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not continue from here");
+      setError(e instanceof Error ? e.message : "Could not create scenario");
     } finally {
       setBusy(false);
     }
-  }
-
-  function requestContinueFromPlayhead() {
-    const rev = revisions[Math.floor(playhead)];
-    if (!rev) return;
-    setConfirmAction({
-      type: "continue-from",
-      seq: rev.seq,
-      label: rev.label ?? `#${rev.seq}`,
-    });
   }
 
   async function runConfirmedAction() {
@@ -474,8 +565,6 @@ export function WorkspaceShell() {
     try {
       if (confirmAction.type === "remove") {
         await removeMember(confirmAction.userId);
-      } else if (confirmAction.type === "continue-from") {
-        await continueFromPlayhead(confirmAction.seq);
       } else {
         await deleteWorkspace();
       }
@@ -722,9 +811,33 @@ export function WorkspaceShell() {
 
         {dockMode === "timeline" ? (
           <div className="timeline-dock">
+            <label className="timeline-branch-picker">
+              <select
+                value={activeBranchId ?? "main"}
+                onChange={(event) => {
+                  const nextBranchId =
+                    event.target.value === "main" ? null : event.target.value;
+                  setActiveBranchId(nextBranchId);
+                  const timeline = timelineForBranch(
+                    revisions,
+                    branches,
+                    nextBranchId,
+                  );
+                  setPlayhead(Math.max(0, timeline.length - 1));
+                }}
+                aria-label="Select timeline path"
+              >
+                <option value="main">Main timeline</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    Scenario · {branch.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="floating-timeline">
               <TimelineScrubber
-                revisions={revisions}
+                revisions={activeRevisions}
                 playhead={playhead}
                 onPlayheadChange={setPlayhead}
                 live={live}
@@ -734,12 +847,12 @@ export function WorkspaceShell() {
               {!live && canEdit ? (
                 <button
                   type="button"
-                  className="timeline-continue"
+                  className="timeline-scenario"
                   disabled={busy}
-                  title="Discard later frames and continue from this point"
-                  onClick={requestContinueFromPlayhead}
+                  title="Create an alternate future from this frame"
+                  onClick={requestScenarioFromPlayhead}
                 >
-                  Continue here
+                  Explore scenario
                 </button>
               ) : null}
               <button
@@ -789,12 +902,12 @@ export function WorkspaceShell() {
             {!live && canEdit ? (
               <button
                 type="button"
-                className="timeline-continue timeline-continue-idle"
+                className="timeline-scenario timeline-continue-idle"
                 disabled={busy}
-                title="Continue from the selected timeline frame"
-                onClick={requestContinueFromPlayhead}
+                title="Create an alternate future from this frame"
+                onClick={requestScenarioFromPlayhead}
               >
-                Continue here
+                Explore scenario
               </button>
             ) : null}
           </div>
@@ -806,31 +919,73 @@ export function WorkspaceShell() {
         title={
           confirmAction?.type === "remove"
             ? "Remove collaborator"
-            : confirmAction?.type === "continue-from"
-              ? "Continue from this frame?"
-              : "Delete workspace"
+            : "Delete workspace"
         }
         body={
           confirmAction?.type === "remove"
             ? `Remove ${confirmAction.label} from this workspace? They will lose access immediately.`
-            : confirmAction?.type === "continue-from"
-              ? `Make “${confirmAction.label}” the live canvas and discard everything after it? You can still scrub earlier frames.`
-              : "Delete this workspace permanently? This cannot be undone."
+            : "Delete this workspace permanently? This cannot be undone."
         }
         confirmLabel={
           confirmAction?.type === "remove"
             ? "Remove"
-            : confirmAction?.type === "continue-from"
-              ? "Continue here"
-              : "Delete workspace"
+            : "Delete workspace"
         }
-        danger={confirmAction?.type !== "continue-from"}
+        danger
         busy={confirmBusy}
         onCancel={() => {
           if (!confirmBusy) setConfirmAction(null);
         }}
         onConfirm={() => void runConfirmedAction()}
       />
+
+      {scenarioFork ? (
+        <div
+          className="scenario-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!busy) setScenarioFork(null);
+          }}
+        >
+          <form
+            className="scenario-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scenario-title"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={(event) => void createScenario(event)}
+          >
+            <p className="scenario-kicker">Alternate future</p>
+            <h2 id="scenario-title">Explore this moment</h2>
+            <p>
+              EvoDeck will add a selectable scenario path from “{scenarioFork.label}”.
+              Your main timeline stays untouched.
+            </p>
+            <label className="scenario-field">
+              <span>Scenario name</span>
+              <input
+                autoFocus
+                value={scenarioName}
+                maxLength={200}
+                onChange={(event) => setScenarioName(event.target.value)}
+                placeholder="Delay launch two weeks"
+              />
+            </label>
+            <div className="scenario-actions">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setScenarioFork(null)}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={busy || !scenarioName.trim()}>
+                {busy ? "Creating…" : "Create scenario"}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </div>
   );
 }

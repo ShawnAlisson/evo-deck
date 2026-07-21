@@ -1154,6 +1154,50 @@ body {
   box-sizing: border-box;
 }
 
+.timeline-branch-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+  position: absolute;
+  right: calc(100% + 0.65rem);
+  top: 50%;
+  width: 8.75rem;
+  transform: translateY(-50%);
+  z-index: 2;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.timeline-branch-picker select {
+  width: 100%;
+  height: 42px;
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-strong);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.95rem) 50%,
+    calc(100% - 0.7rem) 50%;
+  background-size: 0.28rem 0.28rem, 0.28rem 0.28rem;
+  background-repeat: no-repeat;
+  color: var(--ink);
+  font: 600 0.76rem/1.2 inherit;
+  padding: 0.35rem 2rem 0.35rem 0.8rem;
+  box-shadow: var(--glass-rim), 0 10px 28px rgba(28, 25, 20, 0.1);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
 .timeline-actions {
   position: absolute;
   left: calc(100% + 0.45rem);
@@ -1165,7 +1209,8 @@ body {
   pointer-events: auto;
 }
 
-.timeline-continue {
+.timeline-continue,
+.timeline-scenario {
   flex-shrink: 0;
   border: 0;
   border-radius: 999px;
@@ -1181,11 +1226,13 @@ body {
   box-shadow: var(--glass-rim), 0 10px 28px rgba(28, 25, 20, 0.1);
 }
 
-.timeline-continue:hover {
+.timeline-continue:hover,
+.timeline-scenario:hover {
   filter: brightness(1.06);
 }
 
-.timeline-continue:disabled {
+.timeline-continue:disabled,
+.timeline-scenario:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -2105,6 +2152,15 @@ body {
   .bottom-dock {
     bottom: 0.85rem;
   }
+
+  .timeline-branch-picker {
+    right: auto;
+    left: 0;
+    top: auto;
+    bottom: calc(100% + 0.45rem);
+    width: min(9rem, 48vw);
+    transform: none;
+  }
 }
 
 .confirm-backdrop {
@@ -2180,4 +2236,102 @@ body {
 .confirm-ok:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.scenario-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20010;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--backdrop);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  animation: rise 160ms ease;
+}
+
+.scenario-modal {
+  width: min(430px, 100%);
+  padding: 1.35rem;
+  border-radius: 1.15rem;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-rim), var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.scenario-kicker {
+  margin: 0 0 0.3rem;
+  color: var(--copper);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scenario-modal h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.scenario-modal > p:not(.scenario-kicker) {
+  margin: 0.55rem 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.scenario-field {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.scenario-field input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--field-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.7rem 0.75rem;
+}
+
+.scenario-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 1.15rem;
+}
+
+.scenario-actions button {
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.55rem 0.95rem;
+}
+
+.scenario-actions button:first-child {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+}
+
+.scenario-actions button:last-child {
+  border: 0;
+  background: var(--moss);
+  color: var(--on-accent);
+}
+
+.scenario-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

@@ -121,7 +121,6 @@ export async function POST(request: Request, ctx: Ctx) {
         cause: "chat",
         snapshot: next,
         messageId: assistant.id,
-        fromSeq: base?.seq ?? null,
         label: `Live: ${message.slice(0, 60)}`,
       });
     }

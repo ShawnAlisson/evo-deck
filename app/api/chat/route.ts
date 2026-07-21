@@ -9,6 +9,7 @@ import {
   addMessage,
   getLatestRevision,
   getRevisionAtSeq,
+  getTimelineBranch,
   listMessages,
   appendRevision,
 } from "@/lib/workspace/timeline";
@@ -21,6 +22,7 @@ export const maxDuration = 300;
 const bodySchema = z.object({
   workspaceId: z.string().uuid(),
   message: z.string().min(1),
+  branchId: z.string().uuid().nullable().optional(),
   fromSeq: z.number().int().positive().optional(),
 });
 
@@ -28,20 +30,41 @@ export async function POST(request: Request) {
   try {
     const body = bodySchema.parse(await request.json());
     await requireWorkspaceAccess(body.workspaceId, "editor");
-
-    const userMessage = await addMessage({
-      workspaceId: body.workspaceId,
-      role: "user",
-      content: body.message,
-    });
+    const branchId = body.branchId ?? null;
+    if (branchId && !(await getTimelineBranch(body.workspaceId, branchId))) {
+      return NextResponse.json({ error: "Branch not found" }, { status: 404 });
+    }
 
     const base =
       body.fromSeq != null
         ? await getRevisionAtSeq(body.workspaceId, body.fromSeq)
-        : await getLatestRevision(body.workspaceId);
+        : await getLatestRevision(body.workspaceId, branchId);
+
+    // Historical frames are evidence, not a mutable alternate head. Editing
+    // one must happen in a selected scenario branch so the main timeline
+    // remains auditable.
+    if (body.fromSeq != null) {
+      const latest = await getLatestRevision(body.workspaceId, branchId);
+      if (!base || !latest || base.seq !== latest.seq) {
+        return NextResponse.json(
+          {
+            error:
+              "This is a historical frame. Create a scenario before changing it.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    const userMessage = await addMessage({
+      workspaceId: body.workspaceId,
+      branchId,
+      role: "user",
+      content: body.message,
+    });
 
     const snapshot = base?.snapshot ?? emptySnapshot();
-    const history = (await listMessages(body.workspaceId))
+    const history = (await listMessages(body.workspaceId, branchId))
       .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({
         role: m.role as "user" | "assistant",
@@ -122,16 +145,17 @@ export async function POST(request: Request) {
 
     const assistant = await addMessage({
       workspaceId: body.workspaceId,
+      branchId,
       role: "assistant",
       content: assistantMessage,
     });
 
     const revision = await appendRevision({
       workspaceId: body.workspaceId,
+      branchId,
       cause: "chat",
       snapshot: nextSnapshot,
       messageId: assistant.id,
-      fromSeq: body.fromSeq ?? base?.seq ?? null,
       label: body.message.slice(0, 80),
     });
 
