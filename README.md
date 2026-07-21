@@ -81,6 +81,7 @@ Set `AI_PROVIDER` in `.env.local`, then restart the app:
 | Provider | Required environment | Notes |
 | --- | --- | --- |
 | `openai` (default) | `OPENAI_API_KEY` | Also supports OpenRouter, LM Studio, and Ollama through `OPENAI_BASE_URL`. |
+
 To run the app with GPT-5.6, use:
 
 ```bash
@@ -140,10 +141,9 @@ Codex was used as the coding agent throughout the build: it inspected the existi
 
 GPT-5.6 serves two related roles:
 
-1. **In the product:** when `OPENAI_MODEL=gpt-5.6`, it interprets workspace requests and produces structured, schema-checked operations that add or update visual widgets. The Trigger.dev `chat.agent()` path also uses the configured provider for durable, resumable conversations.
+1. **In the product:** when `OPENAI_MODEL=gpt-5.6`, it interprets workspace requests and produces structured, schema-checked operations that add or update visual widgets.
 2. **During development:** it was used through Codex for architecture exploration, implementation, debugging, documentation, and iteration on the interaction model.
 
-The product also keeps provider boundaries explicit: Gemini and Vertex are supported alternatives, while the OpenAI path is the one used for GPT-5.6.
 
 ## Project assets
 
