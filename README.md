@@ -81,9 +81,6 @@ Set `AI_PROVIDER` in `.env.local`, then restart the app:
 | Provider | Required environment | Notes |
 | --- | --- | --- |
 | `openai` (default) | `OPENAI_API_KEY` | Also supports OpenRouter, LM Studio, and Ollama through `OPENAI_BASE_URL`. |
-| `gemini` | `GEMINI_API_KEY` | Direct Google AI Studio option. |
-| `vertex` | `GOOGLE_CLOUD_PROJECT` and credentials, or `VERTEX_API_KEY` | Set `GOOGLE_CLOUD_LOCATION` and optionally `VERTEX_MODEL`. |
-
 To run the app with GPT-5.6, use:
 
 ```bash
@@ -93,7 +90,7 @@ OPENAI_MODEL=gpt-5.6
 
 The OpenAI adapter automatically omits a custom temperature for GPT-5.6 reasoning models and retries without it if an endpoint reports that temperature is unsupported.
 
-### Optional ClickHouse setup
+### ClickHouse setup
 
 Create a ClickHouse Cloud service, copy its connection details from **Connect**, and set `CLICKHOUSE_URL`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, and `CLICKHOUSE_DATABASE` in `.env.local`. Then initialize the database and event table:
 
@@ -104,7 +101,7 @@ npm run clickhouse:events
 
 Without ClickHouse credentials, ordinary workspaces still run. Live requests can use freshly fetched in-memory data, but events will not be persisted for later analytical queries.
 
-### Optional Trigger.dev setup
+### Trigger.dev setup
 
 Create a Trigger.dev project, set `TRIGGER_SECRET_KEY`, and start the local worker in a second terminal:
 
