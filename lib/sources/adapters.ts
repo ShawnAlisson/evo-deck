@@ -273,10 +273,19 @@ export class WeatherAdapter implements SourceAdapter {
     workspaceId: string;
     config?: Record<string, unknown>;
   }): Promise<SourceSyncResult> {
-    const place =
-      typeof input.config?.location === "string" && input.config.location.trim()
+    const configuredPlace =
+      typeof input.config?.location === "string"
         ? input.config.location.trim()
-        : "London";
+        : "";
+    // Keep manually-triggered tasks resilient when a full natural-language
+    // request is supplied instead of a clean city name.
+    const place =
+      configuredPlace
+        .replace(
+          /\s+and\s+(?:create|show|build|make|name|display)\b[\s\S]*$/i,
+          "",
+        )
+        .trim() || "London";
 
     const geoRes = await fetch(
       `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en&format=json`,

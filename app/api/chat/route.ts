@@ -101,6 +101,19 @@ export async function POST(request: Request) {
         liveData.dashboard.metrics.length > 0 ||
         Boolean(liveData.dashboard.rich));
 
+    // A live-data request must never fall through to the general GenUI agent
+    // with unresolved data bindings. Ask the user to retry the source instead
+    // of rendering a convincing-looking but unpopulated dashboard.
+    if (intent && !hasLiveDesk) {
+      return NextResponse.json(
+        {
+          error:
+            "The live source did not return data. Retry the request when the source or Trigger workflow is available.",
+        },
+        { status: 503 },
+      );
+    }
+
     // @mention + UI edit ("add a button", checklist, form…) must update that
     // widget — never replace the canvas with a live FX/markets desk.
     const mentioned = parseMentions(body.message, snapshot.widgets);

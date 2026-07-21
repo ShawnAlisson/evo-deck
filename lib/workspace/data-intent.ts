@@ -35,6 +35,13 @@ function extractWeatherLocation(text: string, lower: string): string {
     const m = text.match(re) ?? lower.match(re);
     if (m?.[1]) {
       return m[1]
+        // A natural-language live request often continues with the UI
+        // instruction ("and create/show/build ..."). That text is not part
+        // of the place name and must not be sent to geocoding.
+        .replace(
+          /\s+and\s+(?:create|show|build|make|name|display)\b[\s\S]*$/i,
+          "",
+        )
         .replace(/\?+$/, "")
         .replace(/\b(today|tonight|tomorrow|now|please|right now)\b/gi, "")
         .trim();
@@ -67,7 +74,11 @@ export function detectLiveDataIntent(message: string): LiveDataIntent | null {
     return { kind: "sync", source: "hackernews", topic: text.slice(0, 160) };
   }
 
-  if (/\b(weather|forecast|temperature|how hot|how cold|temps?\b)\b/.test(lower)) {
+  if (
+    /\b(weather|forecast|temperature|how hot|how cold|temps?|heat\s*risk|heat\s*index|heatwave|heat\s+wave)\b/.test(
+      lower,
+    )
+  ) {
     return {
       kind: "sync",
       source: "weather",

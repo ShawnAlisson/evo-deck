@@ -475,6 +475,8 @@ Ops:
 - \`title\` is a short human label (2–5 words).
 - Prefer ADDING widgets. Do NOT remove unrelated widgets or wipe the canvas unless asked.
 - When the user @mentions a widget, UPDATE it — for genui, replace props.response with new OpenUI.
+- Treat hypothetical language such as "if", "when", "unless", or "once" as a condition, not as a fact that has already happened. Preserve the trigger and show the current recommendation separately. Never claim a threshold was reached unless the live data explicitly proves it.
+- For a threshold edit on a decision widget, write the rule as an explicit escalation condition (for example, "Open if feels-like remains above 34°C for 3 hours") and keep the recommendation grounded in the current observed values.
 - Delete / move / resize / rename → matching op.
 - Multiple add_widget ops OK for distinct pieces.
 - Frames are 0–1; omit frame on add to auto-place.
@@ -552,6 +554,7 @@ async function generateSingleGenUiFallback(input: {
 - Pick the best OpenUI chart/control for the request (LineChart, BarChart, AreaChart, PieChart, Table, Form, etc.).
 - For price/BTC/trends use LineChart or AreaChart — not BarChart unless asked.
 - NEVER invent prices, weather, or FX. Use LIVE DATA only when provided.
+- Preserve conditional rules: an instruction beginning with "if" or "when" must remain conditional. Do not turn a future threshold into a statement that it is currently true.
 - When UPDATING a checklist/todo: keep every existing CheckBoxItem, set defaultChecked true/false for the items the user named (4th arg). Do not drop items. Example: milk = CheckBoxItem("Milk", "", "milk", true)
 - Output ONLY openui-lang. First statement must be root = Stack(...).`;
 

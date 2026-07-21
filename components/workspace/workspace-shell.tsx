@@ -91,6 +91,9 @@ export function WorkspaceShell() {
   const [playhead, setPlayhead] = useState(0);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("…");
+  const [refreshingWidgetId, setRefreshingWidgetId] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [dockMode, setDockMode] = useState<DockMode>("idle");
   const [draft, setDraft] = useState("");
@@ -478,6 +481,7 @@ export function WorkspaceShell() {
   async function refreshLiveWidget(widget: WorkspaceWidget) {
     if (!canEdit || !live || busy) return;
     const request = String(widget.props.__liveRequest ?? "refresh live signals");
+    setRefreshingWidgetId(widget.id);
     setBusy(true);
     setBusyLabel("Refreshing live signal…");
     setError(null);
@@ -499,6 +503,7 @@ export function WorkspaceShell() {
       setError(e instanceof Error ? e.message : "Live refresh failed");
     } finally {
       setBusy(false);
+      setRefreshingWidgetId(null);
     }
   }
 
@@ -844,6 +849,7 @@ export function WorkspaceShell() {
           onSelectedChange={onSelectedChange}
           onGenUiAction={handleGenUiAction}
           onRefreshWidget={(widget) => void refreshLiveWidget(widget)}
+          refreshingWidgetId={refreshingWidgetId}
         />
       </div>
 
@@ -910,7 +916,7 @@ export function WorkspaceShell() {
               />
             </div>
             <div className="timeline-actions">
-              {!live && canEdit ? (
+              {activeRevisions.length > 0 && canEdit ? (
                 <button
                   type="button"
                   className="timeline-scenario"
@@ -918,7 +924,7 @@ export function WorkspaceShell() {
                   title="Create an alternate future from this frame"
                   onClick={requestScenarioFromPlayhead}
                 >
-                  Explore scenario
+                  {live ? "Create scenario" : "Explore scenario"}
                 </button>
               ) : null}
               <button
@@ -965,7 +971,7 @@ export function WorkspaceShell() {
             >
               <TimelineIcon />
             </button>
-            {!live && canEdit ? (
+            {activeRevisions.length > 0 && canEdit ? (
               <button
                 type="button"
                 className="timeline-scenario timeline-continue-idle"
@@ -973,7 +979,7 @@ export function WorkspaceShell() {
                 title="Create an alternate future from this frame"
                 onClick={requestScenarioFromPlayhead}
               >
-                Explore scenario
+                {live ? "Create scenario" : "Explore scenario"}
               </button>
             ) : null}
           </div>

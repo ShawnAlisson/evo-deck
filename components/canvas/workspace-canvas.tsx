@@ -56,6 +56,7 @@ export function WorkspaceCanvas({
   onSelectedChange,
   onGenUiAction,
   onRefreshWidget,
+  refreshingWidgetId,
 }: {
   snapshot: WorkspaceSnapshot;
   interactive: boolean;
@@ -66,6 +67,7 @@ export function WorkspaceCanvas({
   onSelectedChange?: (widget: WorkspaceWidget | null) => void;
   onGenUiAction?: (widget: WorkspaceWidget, event: ActionEvent) => void;
   onRefreshWidget?: (widget: WorkspaceWidget) => void;
+  refreshingWidgetId?: string | null;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -398,6 +400,7 @@ export function WorkspaceCanvas({
                 : undefined
             }
             onRefresh={interactive ? onRefreshWidget : undefined}
+            refreshing={refreshingWidgetId === widget.id}
             onPointerDown={(e) => {
               if (e.button === 2) return;
               // Always select on click, even when hitting interactive GenUI controls
@@ -407,11 +410,14 @@ export function WorkspaceCanvas({
                 startDrag(e, widget, "resize");
                 return;
               }
+              // Controls in the header (including the live refresh button)
+              // must remain clickable without being interpreted as a drag
+              // on the surrounding drag handle.
+              if (isInteractivePointerTarget(target)) return;
               if (target.closest("[data-drag-handle], .echo-widget-head")) {
                 startDrag(e, widget, "move");
                 return;
               }
-              if (isInteractivePointerTarget(target)) return;
               startDrag(e, widget, "move");
             }}
           />

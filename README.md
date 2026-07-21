@@ -6,26 +6,18 @@
 
 ## Description
 
-EvoDeck is an AI-native collaborative canvas that turns conversation into an evolving, interactive decision workspace. Teams describe the workspace they need in plain language, refine individual widgets with `@mentions`, scrub through a timeline that preserves important decisions, and explore alternate futures without overwriting what happened.
+EvoDeck turns plain-language requests into interactive visual workspaces for planning, research, and decision-making. Teams can generate charts, checklists, forms, flowcharts, decision matrices, and live-data desks; target individual widgets with `@mentions`; scrub a revision timeline; and branch alternate futures without overwriting the original decision trail.
 
-Most work starts as a conversation, but traditional workspace tools make teams translate that conversation into rigid templates, dashboards, and documents by hand. EvoDeck removes that gap by generating the visual, interactive building blocks that fit the job—whether that means planning a launch, organising a research sprint, or running a weekly operating review.
-
-Under the hood, EvoDeck combines generative UI, durable workspace revisions, real-time collaboration primitives, Trigger.dev background orchestration, and ClickHouse-backed live signals. The result is a workspace that grows with the conversation—not a chatbot next to a dashboard.
-
-## Tags
-
-`AI` · `Generative UI` · `Collaboration` · `Productivity` · `OpenUI` · `Next.js` · `Trigger.dev` · `ClickHouse` · `Postgres` · `Developer Tools`
+The response is the workspace itself—not a chatbot beside a dashboard. EvoDeck combines generative UI, validated AI operations, PostgreSQL-backed history, real-time collaboration primitives, Trigger.dev workflows, and ClickHouse-backed live signals.
 
 ## Why it matters
 
-EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning, decision-making, and collaboration.
-
-- **Start with intent:** turn a plain-language request into the right visual building blocks.
-- **Stay interactive:** generated controls, charts, forms, tables, and checklists are real UI—not a screenshot of UI.
-- **Evolve precisely:** every widget has an `@name`, so a focused request changes one thing without discarding the rest.
-- **Keep decision memory:** each meaningful change becomes a revision on a scrubbable timeline.
-- **Explore safely:** fork any historical frame into a collaborative scenario—without deleting the main timeline.
-- **Ground the canvas:** optional live data flows through Trigger.dev and ClickHouse instead of relying on invented facts.
+- **Start with intent:** describe the workspace you need in natural language.
+- **Make the answer interactive:** generated charts, controls, tables, and checklists are real UI.
+- **Edit precisely:** every widget has a stable name, so `@mentions` can update one object without replacing the canvas.
+- **Preserve decision memory:** meaningful changes become append-only revisions on a scrubbable timeline.
+- **Explore safely:** fork a historical frame into a scenario branch while keeping the main path intact.
+- **Use real signals:** source adapters can fetch live data and turn it into visual, source-backed desks.
 
 ![EvoDeck architecture](docs/architecture.svg)
 
@@ -40,68 +32,123 @@ EvoDeck is not a chatbot next to a dashboard. It is a living canvas for planning
 
 ## Architecture
 
-| Layer                        | What it does                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| **Next.js + React**          | Delivers the collaborative, drag-and-drop workspace experience.                   |
-| **OpenUI**                   | Translates AI intent into valid, interactive generative UI.                       |
-| **AI orchestration**         | Routes requests into safe workspace operations and targeted widget updates.       |
-| **Postgres + Drizzle**       | Persists users, workspaces, collaborators, and revision history.                  |
-| **Trigger.dev + ClickHouse** | Runs background syncs and stores live-event signals for data-backed visual desks. |
+| Layer | What it does |
+| --- | --- |
+| **Next.js + React** | Delivers the collaborative canvas, chat experience, and workspace routes. |
+| **OpenUI** | Provides typed, interactive building blocks for charts, tables, forms, checklists, and other generated UI. |
+| **AI orchestration** | Converts user intent into validated operations such as adding or updating a widget. |
+| **PostgreSQL + Drizzle** | Stores users, workspaces, messages, collaborators, revisions, and scenario branches. |
+| **Trigger.dev** | Runs durable chat sessions with `chat.agent()`, source-sync and multi-step research workflows, including scheduled Hacker News sync. |
+| **ClickHouse** | Stores and queries source events for live-data desks and analytical views. |
+
+### Trigger.dev and ClickHouse flow
+
+For a live-data request, EvoDeck detects the intent and calls a source adapter such as weather, Hacker News, RSS, GitHub, markets, or foreign exchange. The result is rendered immediately when possible and inserted into ClickHouse when credentials are configured. If an inline sync fails, EvoDeck queues `sync-source` or `research-workspace` on Trigger.dev; the worker performs the fetch and writes normalized events to ClickHouse.
+
+ClickHouse is not used for transactional workspace state: PostgreSQL remains the system of record for users, messages, revisions, and branches. ClickHouse stores event-shaped live signals in the `events` table, keyed by workspace, source, event type, and timestamp. This separation keeps collaboration history durable while making live signals easy to query and aggregate.
 
 ## Built with
 
-`Next.js` `React` `TypeScript` `OpenUI` `AI SDK` `Trigger.dev` `ClickHouse` `Postgres` `Drizzle ORM` `Zustand`
+`Next.js 16` `React 19` `TypeScript` `OpenUI` `AI SDK` `Trigger.dev` `ClickHouse` `PostgreSQL` `Drizzle ORM` `Zustand`
 
 ## Run locally
 
+### Prerequisites
+
+- Node.js 20 or newer
+- Docker Desktop (for PostgreSQL)
+- An AI provider key, or a local OpenAI-compatible endpoint
+- ClickHouse Cloud and Trigger.dev are optional for the basic canvas; they are needed for the full background-sync/live-event path
+
+### Setup
+
 ```bash
 cp .env.example .env.local
-# Add an AI provider key and update any optional Trigger.dev / ClickHouse values.
-# Before deploying, set NEXT_PUBLIC_APP_URL to the public https URL for correct social-share links.
-
-docker compose up -d          # Postgres on :5433
 npm install
-npm run db:migrate:sql        # base schema + collaborators + timeline branches
-npm run db:seed               # optional: gives the demo a useful starting state
+
+docker compose up -d
+npm run db:migrate:sql
+npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). To demonstrate background sync and live-data desks, start the Trigger.dev worker in a second terminal and initialize ClickHouse:
+Open [http://localhost:3000](http://localhost:3000). The seed command creates a starter workspace; it is optional if you want to begin with a new workspace.
+
+### AI provider configuration
+
+Set `AI_PROVIDER` in `.env.local`, then restart the app:
+
+| Provider | Required environment | Notes |
+| --- | --- | --- |
+| `openai` (default) | `OPENAI_API_KEY` | Also supports OpenRouter, LM Studio, and Ollama through `OPENAI_BASE_URL`. |
+| `gemini` | `GEMINI_API_KEY` | Direct Google AI Studio option. |
+| `vertex` | `GOOGLE_CLOUD_PROJECT` and credentials, or `VERTEX_API_KEY` | Set `GOOGLE_CLOUD_LOCATION` and optionally `VERTEX_MODEL`. |
+
+To run the app with GPT-5.6, use:
+
+```bash
+AI_PROVIDER=openai
+OPENAI_MODEL=gpt-5.6
+```
+
+The OpenAI adapter automatically omits a custom temperature for GPT-5.6 reasoning models and retries without it if an endpoint reports that temperature is unsupported.
+
+### Optional ClickHouse setup
+
+Create a ClickHouse Cloud service, copy its connection details from **Connect**, and set `CLICKHOUSE_URL`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, and `CLICKHOUSE_DATABASE` in `.env.local`. Then initialize the database and event table:
 
 ```bash
 npm run clickhouse:init
 npm run clickhouse:events
+```
+
+Without ClickHouse credentials, ordinary workspaces still run. Live requests can use freshly fetched in-memory data, but events will not be persisted for later analytical queries.
+
+### Optional Trigger.dev setup
+
+Create a Trigger.dev project, set `TRIGGER_SECRET_KEY`, and start the local worker in a second terminal:
+
+```bash
 npm run trigger:dev
 ```
 
-### AI providers
+The worker loads tasks from `src/trigger`, including:
 
-Set `AI_PROVIDER` in `.env.local`, then restart the app:
+- `sync-source`: fetches one source and writes its events to ClickHouse.
+- `research-workspace`: runs a multi-step Hacker News + RSS workflow with `triggerAndWait`.
+- `sync-hackernews-schedule`: runs every 30 minutes when `DEFAULT_WORKSPACE_ID` is set.
 
-| Provider           | Required environment                                                | Notes                                                                     |
-| ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `openai` (default) | `OPENAI_API_KEY`                                                    | Also supports OpenRouter, LM Studio, or Ollama through `OPENAI_BASE_URL`. |
-| `gemini`           | `GEMINI_API_KEY`                                                    | Direct Google AI Studio option.                                           |
-| `vertex`           | `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, ADC or credentials | Set `VERTEX_MODEL` as needed.                                             |
+If a live sync can run inline, the app uses that result immediately. Trigger.dev provides the durable asynchronous path for queued work, retries, logging, and scheduled execution.
+
+EvoDeck also includes the `evodeck-chat-agent` Trigger chat task. It uses Trigger.dev’s durable session lifecycle and server-side access-token helpers so a conversation can resume across refreshes and worker restarts while continuing to use the configured EvoDeck AI provider.
 
 ## Useful scripts
 
-| Command                     | Purpose                                                     |
-| --------------------------- | ----------------------------------------------------------- |
-| `npm run dev`               | Run the EvoDeck app locally.                                |
-| `npm run trigger:dev`       | Start the local Trigger.dev worker.                         |
-| `npm run openui:generate`   | Refresh the committed server-safe OpenUI prompt and schema. |
-| `npm run clickhouse:init`   | Create the ClickHouse database.                             |
-| `npm run clickhouse:events` | Create the ClickHouse event table.                          |
-| `npm run db:seed`           | Add a demo workspace.                                       |
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Next.js development server. |
+| `npm run build` | Create a production build. |
+| `npm run lint` | Run ESLint. |
+| `npm run trigger:dev` | Start the local Trigger.dev worker. |
+| `npm run openui:generate` | Refresh the committed server-safe OpenUI prompt and schema. |
+| `npm run clickhouse:init` | Verify ClickHouse connectivity and create the app database. |
+| `npm run clickhouse:events` | Create the ClickHouse `events` table. |
+| `npm run db:migrate:sql` | Apply the checked-in PostgreSQL migrations. |
+| `npm run db:seed` | Create a demo workspace. |
+| `npm run db:studio` | Open Drizzle Studio for the PostgreSQL database. |
 
-## Live data, when you need it
+## How Codex and GPT-5.6 were used
 
-EvoDeck can use source-backed data rather than asking the model to guess.
+Codex was used as the coding agent throughout the build: it inspected the existing repository, implemented and refined the Next.js application, helped structure the OpenUI widget model, added validated workspace operations, built PostgreSQL persistence and timeline branching, connected live-data adapters, and verified the local development workflow.
+
+GPT-5.6 serves two related roles:
+
+1. **In the product:** when `OPENAI_MODEL=gpt-5.6`, it interprets workspace requests and produces structured, schema-checked operations that add or update visual widgets. The Trigger.dev `chat.agent()` path also uses the configured provider for durable, resumable conversations.
+2. **During development:** it was used through Codex for architecture exploration, implementation, debugging, documentation, and iteration on the interaction model.
+
+The product also keeps provider boundaries explicit: Gemini and Vertex are supported alternatives, while the OpenAI path is the one used for GPT-5.6.
 
 ## Project assets
-
-The visual kit is deliberately lightweight, editable, and ready for the README, a pitch deck, or the deployed app:
 
 - [EvoDeck mark](public/brand/evodeck-mark.svg)
 - [EvoDeck wordmark](public/brand/evodeck-wordmark.svg)

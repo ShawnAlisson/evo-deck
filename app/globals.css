@@ -1566,6 +1566,16 @@ body {
   animation: live-pulse 2.2s ease-in-out infinite;
 }
 
+.echo-widget-live-indicator.is-refreshing span {
+  width: 0.72rem;
+  height: 0.72rem;
+  background: transparent;
+  border: 2px solid rgba(67, 183, 121, 0.3);
+  border-top-color: #43b779;
+  box-shadow: none;
+  animation: live-spin 0.75s linear infinite;
+}
+
 .echo-widget-live-indicator:hover,
 .echo-widget-live-indicator:focus-visible {
   background: rgba(67, 183, 121, 0.1);
@@ -1593,6 +1603,12 @@ body {
     box-shadow:
       0 0 0 0.24rem rgba(67, 183, 121, 0.18),
       0 0 1rem rgba(67, 183, 121, 0.95);
+  }
+}
+
+@keyframes live-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

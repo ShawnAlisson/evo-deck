@@ -65,6 +65,7 @@ export function WidgetCard({
   onUiState,
   onAction,
   onRefresh,
+  refreshing,
 }: {
   widget: WorkspaceWidget;
   selected?: boolean;
@@ -72,6 +73,7 @@ export function WidgetCard({
   onUiState?: (state: Record<string, unknown>) => void;
   onAction?: (event: ActionEvent) => void;
   onRefresh?: (widget: WorkspaceWidget) => void;
+  refreshing?: boolean;
 }) {
   const mention = widget.name || widget.id;
   const liveSource = asString(widget.props.__liveSource);
@@ -90,7 +92,7 @@ export function WidgetCard({
         {liveSource ? (
           <button
             type="button"
-            className="echo-widget-live-indicator"
+            className={`echo-widget-live-indicator ${refreshing ? "is-refreshing" : ""}`}
             aria-label={onRefresh ? `Refresh ${mention}` : liveHint}
             title={liveHint}
             disabled={!onRefresh}

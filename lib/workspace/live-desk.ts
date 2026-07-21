@@ -186,6 +186,16 @@ export function snapshotFromLiveData(
   live: LiveDataBundle,
 ): WorkspaceSnapshot {
   const sourceKey = liveSourceKey(live);
+  // A refresh replaces the live widget content, but it must not reset the
+  // layout the user chose. Keep frames by widget id and only use the defaults
+  // below when this source has never been rendered before.
+  const previousFrames = new Map(
+    snapshot.widgets.map((widget) => [widget.id, widget.frame]),
+  );
+  const frameFor = (
+    id: string,
+    fallback: WorkspaceSnapshot["widgets"][number]["frame"],
+  ) => previousFrames.get(id) ?? fallback;
   const liveMeta = {
     __liveSource: sourceKey,
     __liveUpdatedAt: new Date().toISOString(),
@@ -205,7 +215,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: "weather",
       title: String(rich.weather.location ?? "Weather"),
-      frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.72, z: z++ },
+      frame: frameFor("live-weather", {
+        x: 0.06,
+        y: 0.06,
+        w: 0.55,
+        h: 0.72,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: weatherDeskResponse(rich.weather),
@@ -220,7 +236,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: "markets",
       title: String(rich.markets.name ?? "Markets"),
-      frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.68, z: z++ },
+      frame: frameFor("live-markets", {
+        x: 0.06,
+        y: 0.06,
+        w: 0.55,
+        h: 0.68,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: marketsDeskResponse(rich.markets),
@@ -235,7 +257,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: "fx-rates",
       title: `${rich.fx.base ?? "FX"} rates`,
-      frame: { x: 0.06, y: 0.06, w: 0.58, h: 0.62, z: z++ },
+      frame: frameFor("live-fx", {
+        x: 0.06,
+        y: 0.06,
+        w: 0.58,
+        h: 0.62,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: fxDeskResponse(rich.fx),
@@ -250,7 +278,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: "wiki",
       title: String(rich.wikipedia.title ?? "Lookup"),
-      frame: { x: 0.08, y: 0.08, w: 0.5, h: 0.55, z: z++ },
+      frame: frameFor("live-wiki", {
+        x: 0.08,
+        y: 0.08,
+        w: 0.5,
+        h: 0.55,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: wikipediaDeskResponse(rich.wikipedia),
@@ -270,7 +304,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: `metric-${m.id}`.replace(/[^a-z0-9-]/gi, "-").slice(0, 48),
       title: m.title,
-      frame: { x: 0.04 + i * 0.24, y: 0.08, w: 0.22, h: 0.18, z: z++ },
+      frame: frameFor(`live-${m.id}`, {
+        x: 0.04 + i * 0.24,
+        y: 0.08,
+        w: 0.22,
+        h: 0.18,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: [
@@ -299,7 +339,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: `chart-${c.id}`.slice(0, 48),
       title: c.title,
-      frame: { x: 0.04, y: 0.3, w: 0.42, h: 0.4, z: z++ },
+      frame: frameFor(`${sourceKey}-chart-${c.id}`, {
+        x: 0.04,
+        y: 0.3,
+        w: 0.42,
+        h: 0.4,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         response: [
@@ -329,13 +375,13 @@ export function snapshotFromLiveData(
       type: "genui",
       name: "live-feed",
       title,
-      frame: {
+      frame: frameFor(`${sourceKey}-feed`, {
         x: live.dashboard.chart ? 0.5 : 0.04,
         y: metrics.length > 0 ? 0.3 : 0.08,
         w: live.dashboard.chart ? 0.46 : 0.7,
         h: 0.5,
         z: z++,
-      },
+      }),
       props: {
         ...liveMeta,
         response: [
@@ -353,7 +399,13 @@ export function snapshotFromLiveData(
       type: "note",
       name: "live-empty",
       title: "Live data",
-      frame: { x: 0.08, y: 0.12, w: 0.4, h: 0.2, z: z++ },
+      frame: frameFor(`${sourceKey}-empty`, {
+        x: 0.08,
+        y: 0.12,
+        w: 0.4,
+        h: 0.2,
+        z: z++,
+      }),
       props: {
         ...liveMeta,
         body: live.detail || "No live events returned.",
