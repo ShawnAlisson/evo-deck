@@ -594,10 +594,11 @@ body {
   top: 1rem;
   right: 5.8rem;
   z-index: 9999;
-  display: grid;
-  gap: 0.32rem;
-  min-width: 13rem;
-  padding: 0.62rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.72rem;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
   border: 1px solid color-mix(in srgb, var(--copper) 24%, var(--glass-border));
   border-radius: 0.9rem;
   background: color-mix(in srgb, var(--glass-strong) 94%, #f1d4ad 6%);
@@ -612,6 +613,7 @@ body {
 .branch-comparison-stats {
   display: flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .branch-comparison-heading {
@@ -2254,7 +2256,14 @@ body {
   .branch-comparison {
     top: 4rem;
     right: 0.75rem;
-    min-width: 0;
+    left: 0.75rem;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+
+  .branch-comparison-stats {
+    gap: 0.35rem;
+    font-size: 0.66rem;
   }
 
   .timeline-branch-picker {
