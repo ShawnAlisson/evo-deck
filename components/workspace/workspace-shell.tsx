@@ -252,6 +252,30 @@ export function WorkspaceShell() {
     () => snapshotAtPlayhead(activeRevisions, playhead),
     [activeRevisions, playhead],
   );
+  const branchComparison = useMemo(() => {
+    if (!activeBranchId) return null;
+    const main = timelineForBranch(revisions, branches, null).at(-1)?.snapshot;
+    const current = activeRevisions.at(-1)?.snapshot;
+    if (!main || !current) return null;
+
+    const mainById = new Map(main.widgets.map((widget) => [widget.id, widget]));
+    const currentById = new Map(
+      current.widgets.map((widget) => [widget.id, widget]),
+    );
+    let changed = 0;
+    for (const [id, widget] of currentById) {
+      const original = mainById.get(id);
+      if (original && JSON.stringify(original) !== JSON.stringify(widget)) {
+        changed += 1;
+      }
+    }
+
+    return {
+      added: [...currentById.keys()].filter((id) => !mainById.has(id)).length,
+      removed: [...mainById.keys()].filter((id) => !currentById.has(id)).length,
+      changed,
+    };
+  }, [activeBranchId, activeRevisions, branches, revisions]);
 
   const avatarPeople = useMemo(() => {
     const byId = new Map<
@@ -448,6 +472,33 @@ export function WorkspaceShell() {
       await refreshWorkspace(true);
     } finally {
       committingRef.current = false;
+    }
+  }
+
+  async function refreshLiveWidget(widget: WorkspaceWidget) {
+    if (!canEdit || !live || busy) return;
+    const request = String(widget.props.__liveRequest ?? "refresh live signals");
+    setBusy(true);
+    setBusyLabel("Refreshing live signal…");
+    setError(null);
+    try {
+      const res = await fetch(`/api/workspace/${workspaceId}/live`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          branchId: activeBranchId,
+          message: request,
+          applyToCanvas: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Live refresh failed");
+      await refreshWorkspace(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Live refresh failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -676,6 +727,20 @@ export function WorkspaceShell() {
         </div>
       </header>
 
+      {branchComparison ? (
+        <div className="branch-comparison" aria-label="Scenario changes">
+          <div className="branch-comparison-heading">
+            <span className="branch-comparison-dot" aria-hidden="true" />
+            <span>Compared with main</span>
+          </div>
+          <div className="branch-comparison-stats">
+            <span>{branchComparison.changed} changed</span>
+            <span>{branchComparison.added} added</span>
+            <span>{branchComparison.removed} removed</span>
+          </div>
+        </div>
+      ) : null}
+
       {peopleOpen ? (
         <div className="people-panel">
           <p className="people-title">Collaborators</p>
@@ -778,6 +843,7 @@ export function WorkspaceShell() {
           onCommit={commitLayout}
           onSelectedChange={onSelectedChange}
           onGenUiAction={handleGenUiAction}
+          onRefreshWidget={(widget) => void refreshLiveWidget(widget)}
         />
       </div>
 

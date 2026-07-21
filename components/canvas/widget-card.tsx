@@ -64,14 +64,18 @@ export function WidgetCard({
   onPointerDown,
   onUiState,
   onAction,
+  onRefresh,
 }: {
   widget: WorkspaceWidget;
   selected?: boolean;
   onPointerDown?: (e: React.PointerEvent) => void;
   onUiState?: (state: Record<string, unknown>) => void;
   onAction?: (event: ActionEvent) => void;
+  onRefresh?: (widget: WorkspaceWidget) => void;
 }) {
   const mention = widget.name || widget.id;
+  const liveSource = asString(widget.props.__liveSource);
+  const liveHint = liveSource ? liveUpdateHint(widget) : "";
 
   return (
     <div
@@ -83,6 +87,21 @@ export function WidgetCard({
         <div className="echo-widget-head-main">
           <span className="echo-widget-mention">@{mention}</span>
         </div>
+        {liveSource ? (
+          <button
+            type="button"
+            className="echo-widget-live-indicator"
+            aria-label={onRefresh ? `Refresh ${mention}` : liveHint}
+            title={liveHint}
+            disabled={!onRefresh}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRefresh?.(widget);
+            }}
+          >
+            <span aria-hidden="true" />
+          </button>
+        ) : null}
       </header>
       <div className="echo-widget-body" data-no-drag>
         {renderBody(widget, onUiState, onAction)}
@@ -90,6 +109,23 @@ export function WidgetCard({
       <div className="echo-resize-handle" data-resize />
     </div>
   );
+}
+
+function liveUpdateHint(widget: WorkspaceWidget) {
+  const source = asString(widget.props.__liveSource, "live data");
+  const via = asString(widget.props.__liveVia);
+  const updatedAt = asString(widget.props.__liveUpdatedAt);
+  let updated = "time unavailable";
+  if (updatedAt) {
+    const parsed = new Date(updatedAt);
+    if (!Number.isNaN(parsed.getTime())) {
+      updated = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(parsed);
+    }
+  }
+  return `${source} · Updated ${updated}${via ? ` · via ${via}` : ""}. Click to refresh.`;
 }
 
 function renderBody(

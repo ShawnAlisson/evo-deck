@@ -589,6 +589,54 @@ body {
   pointer-events: auto;
 }
 
+.branch-comparison {
+  position: absolute;
+  top: 1rem;
+  right: 5.8rem;
+  z-index: 9999;
+  display: grid;
+  gap: 0.32rem;
+  min-width: 13rem;
+  padding: 0.62rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--copper) 24%, var(--glass-border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--glass-strong) 94%, #f1d4ad 6%);
+  box-shadow: var(--glass-rim), 0 12px 30px rgba(28, 25, 20, 0.1);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.branch-comparison-heading,
+.branch-comparison-stats {
+  display: flex;
+  align-items: center;
+}
+
+.branch-comparison-heading {
+  gap: 0.38rem;
+  color: var(--copper);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.branch-comparison-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--copper);
+  box-shadow: 0 0 0.5rem rgba(182, 92, 56, 0.7);
+}
+
+.branch-comparison-stats {
+  gap: 0.65rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .chrome-icon-btn {
   width: 42px;
   height: 42px;
@@ -1490,10 +1538,60 @@ body {
   min-width: 0;
 }
 
+.echo-widget-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  margin: -0.1rem -0.15rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.echo-widget-live-indicator span {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 999px;
+  background: #43b779;
+  box-shadow:
+    0 0 0 0.18rem rgba(67, 183, 121, 0.13),
+    0 0 0.75rem rgba(67, 183, 121, 0.85);
+  animation: live-pulse 2.2s ease-in-out infinite;
+}
+
+.echo-widget-live-indicator:hover,
+.echo-widget-live-indicator:focus-visible {
+  background: rgba(67, 183, 121, 0.1);
+  outline: none;
+}
+
+.echo-widget-live-indicator:disabled {
+  cursor: help;
+}
+
 .echo-widget-mention {
   font-weight: 650;
   letter-spacing: -0.01em;
   color: var(--copper);
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0.16rem rgba(67, 183, 121, 0.12),
+      0 0 0.55rem rgba(67, 183, 121, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 0 0.24rem rgba(67, 183, 121, 0.18),
+      0 0 1rem rgba(67, 183, 121, 0.95);
+  }
 }
 
 .echo-widget-body {
@@ -2151,6 +2249,12 @@ body {
 
   .bottom-dock {
     bottom: 0.85rem;
+  }
+
+  .branch-comparison {
+    top: 4rem;
+    right: 0.75rem;
+    min-width: 0;
   }
 
   .timeline-branch-picker {

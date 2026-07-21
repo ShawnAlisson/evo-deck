@@ -55,6 +55,7 @@ export function WorkspaceCanvas({
   onCommit,
   onSelectedChange,
   onGenUiAction,
+  onRefreshWidget,
 }: {
   snapshot: WorkspaceSnapshot;
   interactive: boolean;
@@ -64,6 +65,7 @@ export function WorkspaceCanvas({
   ) => void | Promise<void>;
   onSelectedChange?: (widget: WorkspaceWidget | null) => void;
   onGenUiAction?: (widget: WorkspaceWidget, event: ActionEvent) => void;
+  onRefreshWidget?: (widget: WorkspaceWidget) => void;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -395,6 +397,7 @@ export function WorkspaceCanvas({
                 ? (event) => onGenUiAction(widget, event)
                 : undefined
             }
+            onRefresh={interactive ? onRefreshWidget : undefined}
             onPointerDown={(e) => {
               if (e.button === 2) return;
               // Always select on click, even when hitting interactive GenUI controls

@@ -10,6 +10,7 @@ import {
   getLatestRevision,
   appendRevision,
   addMessage,
+  getTimelineBranch,
 } from "@/lib/workspace/timeline";
 import { emptySnapshot } from "@/lib/workspace/snapshot";
 import { aggregateLiveDashboard } from "@/lib/clickhouse/dashboard";
@@ -35,6 +36,7 @@ const postSchema = z.object({
   config: z.record(z.string(), z.unknown()).optional(),
   /** When true, also write a canvas revision with the live desk */
   applyToCanvas: z.boolean().optional(),
+  branchId: z.string().uuid().nullable().optional(),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -76,6 +78,10 @@ export async function POST(request: Request, ctx: Ctx) {
     const { id: workspaceId } = await ctx.params;
     await requireWorkspaceAccess(workspaceId, "editor");
     const body = postSchema.parse(await request.json());
+    const branchId = body.branchId ?? null;
+    if (branchId && !(await getTimelineBranch(workspaceId, branchId))) {
+      return NextResponse.json({ error: "Branch not found" }, { status: 404 });
+    }
 
     const message =
       body.message ??
@@ -108,16 +114,18 @@ export async function POST(request: Request, ctx: Ctx) {
 
     let revision = null;
     if (body.applyToCanvas) {
-      const base = await getLatestRevision(workspaceId);
+      const base = await getLatestRevision(workspaceId, branchId);
       const snapshot = base?.snapshot ?? emptySnapshot();
       const next = snapshotFromLiveData(snapshot, live);
       const assistant = await addMessage({
         workspaceId,
+        branchId,
         role: "assistant",
         content: `Live desk refresh via ${live.via}: ${live.detail}`,
       });
       revision = await appendRevision({
         workspaceId,
+        branchId,
         cause: "chat",
         snapshot: next,
         messageId: assistant.id,

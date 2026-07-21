@@ -11,6 +11,13 @@ function liveSourceKey(live: LiveDataBundle) {
   return "fetch";
 }
 
+function liveRequest(live: LiveDataBundle) {
+  if (live.intent.kind === "sync") {
+    return live.intent.topic ?? `sync ${live.intent.source}`;
+  }
+  return live.intent.topic;
+}
+
 function belongsToLiveSource(
   widget: WorkspaceSnapshot["widgets"][number],
   source: string,
@@ -179,6 +186,12 @@ export function snapshotFromLiveData(
   live: LiveDataBundle,
 ): WorkspaceSnapshot {
   const sourceKey = liveSourceKey(live);
+  const liveMeta = {
+    __liveSource: sourceKey,
+    __liveUpdatedAt: new Date().toISOString(),
+    __liveVia: live.via,
+    __liveRequest: liveRequest(live),
+  };
   const keep = snapshot.widgets.filter((w) => !belongsToLiveSource(w, sourceKey));
   const widgets = [...keep];
   let z = Math.max(0, ...widgets.map((w) => w.frame.z), 0) + 1;
@@ -194,7 +207,7 @@ export function snapshotFromLiveData(
       title: String(rich.weather.location ?? "Weather"),
       frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.72, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: weatherDeskResponse(rich.weather),
       },
     });
@@ -209,7 +222,7 @@ export function snapshotFromLiveData(
       title: String(rich.markets.name ?? "Markets"),
       frame: { x: 0.06, y: 0.06, w: 0.55, h: 0.68, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: marketsDeskResponse(rich.markets),
       },
     });
@@ -224,7 +237,7 @@ export function snapshotFromLiveData(
       title: `${rich.fx.base ?? "FX"} rates`,
       frame: { x: 0.06, y: 0.06, w: 0.58, h: 0.62, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: fxDeskResponse(rich.fx),
       },
     });
@@ -239,7 +252,7 @@ export function snapshotFromLiveData(
       title: String(rich.wikipedia.title ?? "Lookup"),
       frame: { x: 0.08, y: 0.08, w: 0.5, h: 0.55, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: wikipediaDeskResponse(rich.wikipedia),
       },
     });
@@ -259,7 +272,7 @@ export function snapshotFromLiveData(
       title: m.title,
       frame: { x: 0.04 + i * 0.24, y: 0.08, w: 0.22, h: 0.18, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: [
           `root = Stack([card])`,
           `card = Card([t, v], "card", "column", "xs")`,
@@ -288,7 +301,7 @@ export function snapshotFromLiveData(
       title: c.title,
       frame: { x: 0.04, y: 0.3, w: 0.42, h: 0.4, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: [
           `root = Stack([title, chart])`,
           `title = TextContent(${j(c.title)}, "large-heavy")`,
@@ -324,7 +337,7 @@ export function snapshotFromLiveData(
         z: z++,
       },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         response: [
           `root = Stack([heading, ${kids}], "column", "s")`,
           `heading = TextContent(${j(title)}, "large-heavy")`,
@@ -342,7 +355,7 @@ export function snapshotFromLiveData(
       title: "Live data",
       frame: { x: 0.08, y: 0.12, w: 0.4, h: 0.2, z: z++ },
       props: {
-        __liveSource: sourceKey,
+        ...liveMeta,
         body: live.detail || "No live events returned.",
       },
     });
